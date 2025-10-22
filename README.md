@@ -21,9 +21,29 @@ The schematics include the BOM and metadata for the JLCPCB fabrication toolkit p
 
 ## Illustrations
 
-- [Schematics](./hardware/v0.2/bed-lift.pdf)
-- [PCB front](./hardware/v0.2/bed-lift-front.png)
-- [PCB back](./hardware/v0.2/bed-lift-back.png)
+[Schematics PDF](./hardware/v0.2/bed-lift.pdf)
+
+<details>
+<summary>PCB front and back</summary>
+
+### PCB front
+![PCB front](./hardware/v0.2/bed-lift-front.png)
+
+### PCB back
+![PCB back](./hardware/v0.2/bed-lift-back.png)
+
+</details>
+
+<details>
+<summary>Bed lift mechanism</summary>
+
+### Bed lift in lowered position
+![Bed lift in lowered position](./docs/bed-lift-lowered.png)
+
+### Bed lift in raised position
+![Bed lift in raised position](./docs/bed-lift-raised.png)
+
+</details>
 
 ## Errata
 
