@@ -2919,6 +2919,24 @@
 				)
 			)
 		)
+		(property "LCSC" "C114098"
+			(at 220.98 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "FT Position Offset" "0,3.81"
+			(at 220.98 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1550128e-84e9-4b6c-b983-d394a99b879a")
 		)

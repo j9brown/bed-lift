@@ -4398,6 +4398,24 @@
 				(justify left)
 			)
 		)
+		(property "LCSC" "C157925"
+			(at 209.55 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "FT Rotation Offset" "180"
+			(at 209.55 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "c4b70597-0ee9-4c75-b1f7-d7831e6492d2")
 		)
