@@ -17,6 +17,14 @@ The MCU receives control inputs from a momentary rocker switch attached to the `
 
 The circuit board requires a 12 V DC nominal supply protected by a 10 A external fuse. If that isn't enough current, the it should be safe to operate the board at up to 15 A with a limited duty cycle of a few minutes.
 
+The schematics include the BOM and metadata for the JLCPCB fabrication toolkit plug-in.
+
+## Illustrations
+
+- [Schematics](./hardware/v0.2/bed-lift.pdf)
+- [PCB front](./hardware/v0.2/bed-lift-front.png)
+- [PCB back](./hardware/v0.2/bed-lift-back.png)
+
 ## Errata
 
 Nothing yet...
