@@ -47,7 +47,7 @@ The schematics include the BOM and metadata for the JLCPCB fabrication toolkit p
 
 ## Errata
 
-Nothing yet...
+v0.2 had the lift motor connect pins 2 and 3 swapped.  Fixed in v0.2.1.
 
 ## Notice
 
