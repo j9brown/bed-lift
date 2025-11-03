@@ -1587,9 +1587,9 @@
 		)
 		(uuid "2e4264e5-93f1-4197-b260-5fcbb23b7034")
 	)
-	(text "Device controlled over SPI so STEP and DIR not used\n~{SCS} pulled low assuming this is the only device on the SPI bus\nVREF tied to DVDD for full-scale current limit, can be scaled\n	down with TRQ_DAC register"
+	(text "Device controlled over SPI so STEP and DIR not used\nVREF tied to DVDD for full-scale current limit, can be scaled\n	down with TRQ_DAC register"
 		(exclude_from_sim no)
-		(at 59.69 125.73 0)
+		(at 59.69 127 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2292,6 +2292,17 @@
 		)
 		(uuid "0c081c6f-edd7-4246-b9ef-3b206468ffdf")
 	)
+	(hierarchical_label "~{SCS}"
+		(shape input)
+		(at 146.05 105.41 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "68cff093-e354-448a-8ef2-8df5eb1017f8")
+	)
 	(hierarchical_label "SDO"
 		(shape output)
 		(at 146.05 113.03 180)
@@ -2542,86 +2553,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 146.05 105.41 270)
-		(mirror x)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "03f13036-b190-48e6-8404-773d197cdc90")
-		(property "Reference" "#PWR046"
-			(at 139.7 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 142.8751 105.41 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" ""
-			(at 146.05 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 146.05 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 146.05 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "53912e94-5cff-4200-816e-3404a18d25f8")
-		)
-		(instances
-			(project "bed-lift"
-				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR057")
-					(unit 1)
-				)
-				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR068")
-					(unit 1)
-				)
-				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
-					(reference "#PWR046")
-					(unit 1)
-				)
-				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR079")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:NetTie_2")
 		(at 77.47 64.77 0)
 		(unit 1)
@@ -2764,11 +2695,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR055")
+					(reference "#PWR054")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR066")
+					(reference "#PWR064")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
@@ -2776,7 +2707,7 @@
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR077")
+					(reference "#PWR074")
 					(unit 1)
 				)
 			)
@@ -2792,7 +2723,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "23f4319b-576d-441a-9f81-0ed75a797b9a")
-		(property "Reference" "#PWR051"
+		(property "Reference" "#PWR050"
 			(at 146.05 133.35 0)
 			(effects
 				(font
@@ -2842,19 +2773,19 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR062")
+					(reference "#PWR060")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR073")
+					(reference "#PWR070")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
-					(reference "#PWR051")
+					(reference "#PWR050")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR084")
+					(reference "#PWR080")
 					(unit 1)
 				)
 			)
@@ -2870,7 +2801,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2f524380-c058-4303-90fd-d9d93100e6df")
-		(property "Reference" "#PWR047"
+		(property "Reference" "#PWR046"
 			(at 198.12 110.49 0)
 			(effects
 				(font
@@ -2921,19 +2852,19 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR058")
+					(reference "#PWR056")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR069")
+					(reference "#PWR066")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
-					(reference "#PWR047")
+					(reference "#PWR046")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR080")
+					(reference "#PWR076")
 					(unit 1)
 				)
 			)
@@ -3000,11 +2931,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR052")
+					(reference "#PWR051")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR063")
+					(reference "#PWR061")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
@@ -3012,7 +2943,7 @@
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR074")
+					(reference "#PWR071")
 					(unit 1)
 				)
 			)
@@ -3623,11 +3554,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR053")
+					(reference "#PWR052")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR064")
+					(reference "#PWR062")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
@@ -3635,7 +3566,7 @@
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR075")
+					(reference "#PWR072")
 					(unit 1)
 				)
 			)
@@ -3651,7 +3582,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "69a5483f-c7e5-44ef-927e-7716fe63a8fa")
-		(property "Reference" "#PWR048"
+		(property "Reference" "#PWR047"
 			(at 198.12 113.03 0)
 			(effects
 				(font
@@ -3702,19 +3633,19 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR059")
+					(reference "#PWR057")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR070")
+					(reference "#PWR067")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
-					(reference "#PWR048")
+					(reference "#PWR047")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR081")
+					(reference "#PWR077")
 					(unit 1)
 				)
 			)
@@ -3782,11 +3713,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR056")
+					(reference "#PWR055")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR067")
+					(reference "#PWR065")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
@@ -3794,7 +3725,7 @@
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR078")
+					(reference "#PWR075")
 					(unit 1)
 				)
 			)
@@ -3810,7 +3741,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "78afe8fc-76fb-4570-9f5a-db78a973c13d")
-		(property "Reference" "#PWR050"
+		(property "Reference" "#PWR049"
 			(at 198.12 115.57 0)
 			(effects
 				(font
@@ -3861,19 +3792,19 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR061")
+					(reference "#PWR059")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR072")
+					(reference "#PWR069")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
-					(reference "#PWR050")
+					(reference "#PWR049")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR083")
+					(reference "#PWR079")
 					(unit 1)
 				)
 			)
@@ -3888,7 +3819,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "912603bc-9d07-42c7-9e63-6553c7034787")
-		(property "Reference" "#PWR049"
+		(property "Reference" "#PWR048"
 			(at 140.97 115.57 0)
 			(effects
 				(font
@@ -3939,19 +3870,19 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR060")
+					(reference "#PWR058")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR071")
+					(reference "#PWR068")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
-					(reference "#PWR049")
+					(reference "#PWR048")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR082")
+					(reference "#PWR078")
 					(unit 1)
 				)
 			)
@@ -4316,11 +4247,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/442ee682-ada2-425f-9798-dd2a09ab0c93"
-					(reference "#PWR054")
+					(reference "#PWR053")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/7263d767-1c81-4e55-be7f-df3742b1a336"
-					(reference "#PWR065")
+					(reference "#PWR063")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/78bb3d31-b385-4c21-be56-600b0b690b74"
@@ -4328,7 +4259,7 @@
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/bd85a680-67bc-44d2-872a-bfd1d0a269a3"
-					(reference "#PWR076")
+					(reference "#PWR073")
 					(unit 1)
 				)
 			)

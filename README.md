@@ -1,53 +1,52 @@
 # Bed-lift controller
 
-**Status: UNDER DEVELOPMENT**
+Controls a motorized bed-lift with two synchronized linear actuators for vertical lifting and lowering and two pairs of synchronized stepper motors for horizontal extension and retraction.  It fits in the back of a campervan.
 
-Controls a motorized bed-lift with two synchronized linear actuators for vertical lifting and lowering and two pairs of synchronized stepper motors for horizontal expansion and contraction.
+## Circuit board revisions
 
-## Design synopsis
+Refer to the following documents for design synopsis, schematics, and circuit board illustrations.
 
-The controller has the following major components:
+- [v0.3](./hardware/v0.3/design-and-errata.md): Work in progress to correct errata from v0.2
+- [v0.2](./hardware/v0.2/design-and-errata.md): First feature-complete circuit board
+- [v0.1](./hardware/v0.1/design-and-errata.md): Initial hand-assembled prototype
 
-- A [STM32C031K6T6](https://www.st.com/resource/en/datasheet/stm32c031k6.pdf) controls the actuators. It is programmed with SWD using a [Tag-Connect 2030-NL](https://www.tag-connect.com/info) connector, UART, or I2C.
-- A [ISO1640](https://www.ti.com/lit/ds/symlink/iso1640.pdf) isolates the I2C bus to prevent ground loops through the `QWIIC` connector because the driver has a separate power supply.
-- Four [DRV8434S](https://www.ti.com/lit/ds/symlink/drv8434s.pdf) stepper motor drivers operate the four motors that expand and retract the side spans of the bed.
-- Two [DRV8874](https://www.ti.com/lit/ds/slvsf66a/slvsf66a.pdf) motor drivers operate the two linear actuators that raise and lower the bed.
+## About the "forklift" bed
 
-The MCU receives control inputs from a momentary rocker switch attached to the `CONTROL` input and it provides feedback on its progress to an RGB LED indicator.  It also receives control inputs and provides feedback over I2C to a host controller via the `QWIIC` connector.  It receives position feedback to synchronize the motors from the lift actuator hall sensors, lift `LIMIT` switches, and stepper motor driver stall detection.
+This custom motorized bed fits in the back of a small campervan to allow dual-use of the living area in a standard wheelbase vehicle.  In its raised position, the bed platform is only supported from the back which gives it the appearance of a pallet on a forklift, hence the name.
 
-The circuit board requires a 12 V DC nominal supply protected by a 10 A external fuse. If that isn't enough current, the it should be safe to operate the board at up to 15 A with a limited duty cycle of a few minutes.
+To maximize space efficiency, the bed is designed for sleeping crosswise with the head and feet towards the sides of the vehicle.  This choice of sleeping orientation poses unique engineering challenges; it is more common to design lifting beds for sleeping tranversely with the head and feet towards the front and back of the vehicle.
 
-The schematics include the BOM and metadata for the JLCPCB fabrication toolkit plug-in.
+Because the van is narrower at roof elevantion than at sleeping elevation, the bed extends and retracts to span the gap between the main body of the bed platform and the sides of the vehicle.  The parts that extend and retract are called the bed wings (aka. wing spans).  The bed mattress is made of three cushions: one large central cushion on the main body of the bed platform and two narrower cushions that rest on the two bed wings.  The narrower cushions are removed and stowed on top of the bed before retracting the bed wings.
 
-## Illustrations
+- When the bed is raised, the bed wings retract into the bed platform and the platform is cantilevered from steel columns attached to the rear doorframe and floor of the vehicle.
 
-[Schematics PDF](./hardware/v0.2/bed-lift.pdf)
+- When the bed is lowered, the bed wings extend from the bed platform and rest upon reinforced windowsills to transfer the load of the occupants to the vehicle walls.
+
+The bed has limited load bearing capacity while raised so it must be lowered when occupied or while driving to prevent excess torque through the cantilever.  As an advantage, there are no cables, straps, bulkheads, guides, posts, or other obstructions in the front of the living area to support the bed.  As a disadvantage, the bed structure is heavy and difficult to build.
+
+Feel free to contact me for advice if you are interested in building a bed like mine.
 
 <details>
-<summary>PCB front and back</summary>
+<summary>Photos</summary>
 
-### PCB front
-![PCB front](./hardware/v0.2/bed-lift-front.png)
+### Bed lift prototype in lowered position
+![Bed lift in lowered position](./docs/bed-lift-prototype-lowered.jpg)
 
-### PCB back
-![PCB back](./hardware/v0.2/bed-lift-back.png)
+### Bed lift prototype in raised position
+![Bed lift in raised position](./docs/bed-lift-prototype-raised.jpg)
 
 </details>
 
 <details>
-<summary>Bed lift mechanism</summary>
+<summary>CAD model</summary>
 
-### Bed lift in lowered position
-![Bed lift in lowered position](./docs/bed-lift-lowered.png)
+### Bed lift CAD model in lowered position
+![Bed lift in lowered position](./docs/bed-lift-model-lowered.png)
 
-### Bed lift in raised position
-![Bed lift in raised position](./docs/bed-lift-raised.png)
+### Bed lift CAD model in raised position
+![Bed lift in raised position](./docs/bed-lift-model-raised.png)
 
 </details>
-
-## Errata
-
-Nothing yet...
 
 ## Notice
 
