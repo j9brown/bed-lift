@@ -38,7 +38,7 @@ Be advised that this version of the circuit board contains errors that must be c
 
 The lift motor connector pins 2 and 3 are swapped which reverses the polarity of the power supply to the hall sensors.
 
-  - Workaround: Cut the connector pins and install jumpers.
+  - Workaround: Release the terminals with the red and black wires from the motor connector and swap them.  Add a label to the motor cable to indicate that this was done so the change can be reverted when the errata is corrected.
 
 The DRV8434S must observe a high-to-low transition of nSCS to being an SPI transaction.  Unfortunately nSCS was tied to ground because it was believed no chip select was needed due to the absence of other devices on the SPI bus.
 
