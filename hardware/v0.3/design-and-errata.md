@@ -45,3 +45,7 @@ Shuffled GPIOs:
 - Added `SPI1_NSS` signal for DRV8434S chip-select from `PA4`.
 - Moved `SPAN_FAULT` signal from `PA4` to `PA3`.
 - Moved `DRV_SLEEP` signal from `PA3` to `PC15`.
+
+TODO:
+
+- Add bulk capacitors for every motor driver, perhaps 47 uF aluminum polymer to distribute the current.
