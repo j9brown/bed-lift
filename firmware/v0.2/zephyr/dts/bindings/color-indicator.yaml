@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: A color status indicator controlled with hue and brightness
+
+compatible: "color-indicator"
+
+properties:
+  pwms:
+    type: phandle-array
+    required: true
+    description: |
+      An array of 3 PWM phandles in the order red, green, blue

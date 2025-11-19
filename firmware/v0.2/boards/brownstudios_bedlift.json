@@ -1,0 +1,30 @@
+{
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m0plus",
+    "extra_flags": "-DSTM32C0 -DSTM32C0xx -DSTM32C031xx",
+    "f_cpu": "48000000L",
+    "mcu": "stm32c031k6t6",
+    "product_line": "STM32C031xx",
+    "variant": "STM32C031K6T6"
+  },
+  "debug": {
+    "jlink_device": "STM32C031K6",
+    "openocd_target": "stm32c0x",
+    "svd_path": "STM32C031.svd"
+  },
+  "frameworks": [
+    "zephyr"
+  ],
+  "name": "Brown Studios Bed Lift",
+  "upload": {
+    "maximum_ram_size": 12288,
+    "maximum_size": 32768,
+    "protocol": "stlink",
+    "protocols": [
+      "stlink"
+    ]
+  },
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32c031k6.html",
+  "vendor": "Brown Studios"
+}

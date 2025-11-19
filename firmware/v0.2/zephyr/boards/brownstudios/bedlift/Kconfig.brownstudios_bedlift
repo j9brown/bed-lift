@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_BROWNSTUDIOS_BEDLIFT
+	select SOC_STM32C031XX
