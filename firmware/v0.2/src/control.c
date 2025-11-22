@@ -1,5 +1,7 @@
+#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/sys/atomic.h>
 
 #include "control.h"
 
@@ -52,7 +54,10 @@ void control_work_handler(struct k_work* work) {
 int control_init(void) {
     int err;
     const struct device *port = control_up_gpio.port;
-    if (port != control_down_gpio.port || !device_is_ready(port)) {
+    if (!device_is_ready(port)) {
+        return -ENODEV;
+    }
+    if (port != control_down_gpio.port) {
         return -EIO;
     }
     gpio_init_callback(&control_gpio_callback, control_gpio_callback_handler,

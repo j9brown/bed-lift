@@ -1,6 +1,10 @@
+/**
+ * @file
+ * @brief Reads the control button state.
+ */
+
 #pragma once
 
-#include <zephyr/kernel.h>
 #include <stdint.h>
 
 enum control_action {
@@ -12,12 +16,12 @@ enum control_action {
 };
 
 /**
- * The callback to invoke when the control action changes.
+ * @brief The callback to invoke when the control action changes.
  * Runs on the system work queue.
  */
 extern void control_action_callback(enum control_action action);
 
 /**
- * Initializes the control driver.
+ * @brief Initialize the control driver.
  */
 int control_init(void);

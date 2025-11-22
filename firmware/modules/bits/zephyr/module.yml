@@ -1,0 +1,4 @@
+name: bits
+build:
+  settings:
+    dts_root: zephyr

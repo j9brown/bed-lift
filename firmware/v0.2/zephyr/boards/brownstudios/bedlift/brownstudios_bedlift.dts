@@ -1,5 +1,3 @@
-/* SPDX-License-Identifier: Apache-2.0 */
-
 /dts-v1/;
 #include <st/c0/stm32c031X6.dtsi>
 #include <st/c0/stm32c031c(4-6)tx-pinctrl.dtsi>
@@ -51,6 +49,15 @@
 	};
 };
 
+&timers14 {
+	st,prescaler = <0>;
+	status = "okay";
+
+	span_step_counter: counter {
+		status = "okay";
+	};
+};
+
 &i2c1 {
 	pinctrl-0 = <&i2c1_scl_pb6>, <&i2c1_sda_pb7>;
 	pinctrl-names = "default";
@@ -62,11 +69,33 @@
 	pinctrl-0 = <&spi1_sck_pa5>, <&spi1_miso_pa6>, <&spi1_mosi_pa7>;
 	pinctrl-names = "default";
 	clock-frequency = <DT_FREQ_M(1)>;
-	cs-gpios = <&gpioc 14 GPIO_ACTIVE_LOW>;
-	drv8434s_spi_device: spi-device@0 {
-		reg = <0>;
-	};
+	cs-gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
 	status = "okay";
+
+	span_step_driver: spi-device@0 {
+		compatible = "ti,drv8434s";
+
+		status = "okay";
+		reg = <0>;
+		spi-max-frequency = <10000000>; /* datasheet maximum: 10 MHz */
+		/* TODO: These will be needed for Zephyr 4.3, PIO currently has Zephyr 4.2.1.
+		spi-cs-setup-delay-ns = <50>;
+		spi-cs-hold-delay-ns = <50>;
+		*/
+
+		num-devices = <4>;
+		fault-gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
+		sleep-gpios = <&gpioa 3 GPIO_ACTIVE_LOW>;
+
+		/* Average current measurements for different values at 1000 steps / second
+		 *
+		 *   4: 1.7 A
+		 *   5: 1.4 A, circuit board very hot under the chip
+		 *   6: 1.2 A
+		 *   7: 1.0 A
+		 */
+		trq-dac = <7>;
+	};
 };
 
 &usart1 {

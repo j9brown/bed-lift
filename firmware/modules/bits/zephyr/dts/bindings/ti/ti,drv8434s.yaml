@@ -1,0 +1,112 @@
+description: |
+  TI DRV8434S SPI stepper motor driver.
+
+  Controls a daisy chain of motor drivers using SPI commands only.
+
+  The driver does not use the STEP pin; leave it unconnected or pulled low.
+  The driver does not use the DIR pin; leave it unconnected or pulled low.
+  The driver does not use the ENABLE pin; leave it unconnected or pulled high
+  for normal operation or drive it externally to enable/disable the outputs.
+
+  The driver controls the motors as a synchronized batch with separate step
+  and direction inputs for each motor.
+
+  The driver currently assumes that all of the motor drivers have the same
+  configuration.
+
+  These configuration register values are hardcoded:
+
+    - EN_OUT = 1: Enables motor output.
+    - EN_OL = 1: Enables open load detection.
+    - OL_MODE = 0: Open load condition causes a latched fault.
+    - OCP_MODE = 0: Overcurrent condition causes a latched fault.
+    - OTSD_MODE = 0: Overtemperature condition causes a latched fault.
+    - OTW_REP = 1: Overtemperature warning is reported on nFAULT.
+    - STL_REP = 1: Stall condition is reported on nFAULT.
+    - EN_SSC = 1: Spread spectrum is enabled.
+    - TRQ_SCALE = 0: TRQ_COUNT scaling is disabled.
+
+compatible: "ti,drv8434s"
+
+include: spi-device.yaml
+
+properties:
+  num-devices:
+    type: int
+    required: true
+    description: |
+      Number of motor driver devices in the daisy chain, 1 to 63.
+
+  fault-gpios:
+    type: phandle-array
+    description: Fault pin (active low).
+
+  sleep-gpios:
+    type: phandle-array
+    description: Sleep pin (active low).
+
+  trq-dac:
+    type: int
+    default: 0
+    description: |
+      TRQ_DAC setting from 0 (100% scale) to 15 (6.25% scale) in steps of 6.25%.
+      The reference current limit is obtained by multiplying `1 - TRQ_DAC / 16`
+      by the full-scale reference current limit set by the voltage at the V_REF pin.
+
+      The default is full-scale and matches the device's power-on reset configuration.
+
+  decay:
+    type: int
+    default: 7
+    description: |
+      DECAY setting from 0 to 7, determines current chopping behavior according
+      to this table from the datasheet.
+
+      | Value | Increasing current    | Decreasing current    |
+      | ----- | --------------------- | --------------------- |
+      |   0   | Slow decay            | Slow decay            |
+      |   1   | Slow decay            | Mixed decay: 30% fast |
+      |   2   | Slow decay            | Mixed decay: 60% fast |
+      |   3   | Slow decay            | Fast decay            |
+      |   4   | Mixed decay: 30% fast | Mixed decay: 30% fast |
+      |   5   | Mixed decay: 60% fast | Mixed decay: 60% fast |
+      |   6   | Smart tune dynamic    | Smart tune dynamic    |
+      |   7   | Smart tune ripple     | Smart tune ripple     |
+
+      The default of Smart tune ripple control matches the device's power-on reset configuration
+      and is needed to enable stall detection.
+
+  toff:
+    type: int
+    default: 1
+    description: |
+      TOFF setting from 0 to 3, determines the PWM off time for all decay modes except
+      Smart tune ripple control.
+
+      Values: 0 -> 7 us, 1 -> 16 us, 2 -> 24 us, 3 -> 32 us.
+
+      The default matches the device's power-on reset configuration.
+      This value is ignored if the decay mode is Smart tune ripple control.
+
+  rc-ripple:
+    type: int
+    default: 0
+    description: |
+      RC_RIPPLE setting from 0 to 3, determines the ripple current for the Smart tune
+      ripple control mode. The datasheet advises choosing a lowest possible ripple
+      current to ensure the PWM frequency is above the audible range.
+
+      Values: 0 -> 19 mA + 1% I_TRIP, 1 -> ... + 2%, 2 -> ... + 4%, 3 -> ... + 6%.
+
+      The default matches the device's power-on reset configuration.
+      This value is ignored if the decay mode is not Smart tune ripple control.
+
+  stall-th:
+    type: int
+    default: 0
+    description: |
+      STALL_TH setting, 12 bit stall threshold.
+      EN_STL is set to 1 (enabled) when STALL_TH is non-zero or 0 (disabled) otherwise.
+
+      The default disables stall detection because it requires careful tuning.
+      This value is ignored if the decay mode is not Smart tune ripple control.

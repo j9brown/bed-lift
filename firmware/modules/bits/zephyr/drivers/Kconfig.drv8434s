@@ -1,0 +1,22 @@
+DT_COMPAT_TI_DRV8434S := ti,drv8434s
+
+config DT_HAS_TI_DRV8434S_ENABLED
+	def_bool $(dt_compat_enabled,$(DT_COMPAT_TI_DRV8434S))
+
+config DRV8434S
+	bool "TI DRV8434S stepper motor driver"
+	default y
+	depends on DT_HAS_TI_DRV8434S_ENABLED
+	select SPI
+	help
+	  Enable driver for TI DRV8434S stepper motor driver.
+
+if DRV8434S
+
+config DRV8434S_INIT_PRIORITY
+	int "Init priority"
+	default 80
+	help
+	  TI DRV8434S device driver initialization priority. Must be greater than SPI_INIT_PRIORITY.
+
+endif # DRV8434S

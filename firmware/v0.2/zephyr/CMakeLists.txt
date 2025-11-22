@@ -1,4 +1,5 @@
-# SPDX-License-Identifier: Apache-2.0
+set(ZEPHYR_EXTRA_MODULES "${CMAKE_CURRENT_SOURCE_DIR}/../../modules/bits")
+
 set(BOARD_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 cmake_minimum_required(VERSION 3.13.1)
