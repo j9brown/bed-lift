@@ -257,6 +257,11 @@ void loop() {
     digitalWrite(MOTOR_B_IN2_PIN, true);
   }
   if (key_state == 0) {
+    if (error) {
+      // FIXME: dubious!
+      motor_a_tracker.reset_position();
+      motor_b_tracker.reset_position();
+    }
     error = false;
     motor_a_movement = 0;
     motor_b_movement = 0;
