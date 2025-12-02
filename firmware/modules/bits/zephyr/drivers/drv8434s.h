@@ -100,7 +100,7 @@ int drv8434s_get_fault_status(const struct device *dev, const struct drv8434s_op
  *
  * @param dev DRV8434S device node.
  * @param options Options for the request.
- * @param enabled_set Set bits with BIT(index) for the devices whose outputs are to
+ * @param enabled_set Set bits with BIT64(index) for the devices whose outputs are to
  * be enabled, all other devices will have their outputs disabled.
  * @retval 0 If successful.
  * @retval -EINVAL If the chain is stopped.
@@ -167,6 +167,7 @@ static inline uint8_t drv8434s_make_step_request(bool step, bool dir,
  */
 typedef void (*drv8434s_callback_t)(const struct device *dev, int result, void *data);
 
+#ifdef CONFIG_SPI_ASYNC
 /**
  * @brief Asynchronously send a step request to each motor driver device in the chain.
  *
@@ -189,6 +190,7 @@ typedef void (*drv8434s_callback_t)(const struct device *dev, int result, void *
  */
 int drv8434s_step_async(const struct device *dev, const struct drv8434s_options *options,
         const uint8_t* step_requests, drv8434s_callback_t callback, void* user_data);
+#endif /* CONFIG_SPI_ASYNC */
 
 /**
  * @brief Send a step request to each motor driver device in the chain.
@@ -201,7 +203,34 @@ int drv8434s_step_async(const struct device *dev, const struct drv8434s_options 
  * @retval -EBUSY If an asynchronous operation is in progress.
  * @retval -errno Negative errno code on failure.
  */
-static inline int drv8434s_step(const struct device *dev, const struct drv8434s_options *options,
-        const uint8_t* step_requests) {
-    return drv8434s_step_async(dev, options, step_requests, NULL, NULL);
-}
+int drv8434s_step(const struct device *dev, const struct drv8434s_options *options,
+        const uint8_t* step_requests);
+
+/**
+ * @brief Set or clear the STL_LRN bit to learn the stall threshold.
+ *
+ * @param dev DRV8434S device node.
+ * @param options Options for the request.
+ * @param stall_learn Enable stall learning if true.
+ * @retval 0 If successful.
+ * @retval -EINVAL If the chain is stopped.
+ * @retval -EBUSY If an asynchronous operation is in progress.
+ * @retval -errno Negative errno code on failure.
+ */
+int drv8434s_set_stall_learn_mode(const struct device *dev, const struct drv8434s_options *options,
+        bool stall_learn);
+
+/**
+ * @brief Get the result of the stall learning process and the learned stall thresholds if any.
+ *
+ * @param dev DRV8434S device node.
+ * @param options Options for the request.
+ * @param learned_set Populated with BIT64(index) for each device whose stall threshold was learned.
+ * @param stall_th_buf Buffer for num_devices stall thresholds. Populated with the value of each device's STALL_TH register.
+ * @retval 0 If successful.
+ * @retval -EINVAL If the chain is stopped.
+ * @retval -EBUSY If an asynchronous operation is in progress.
+ * @retval -errno Negative errno code on failure.
+ */
+int drv8434s_get_stall_learn_result(const struct device *dev, const struct drv8434s_options *options,
+        uint64_t *learned_set, uint16_t *stall_th_buf);

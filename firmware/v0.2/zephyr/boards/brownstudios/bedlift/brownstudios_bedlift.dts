@@ -2,6 +2,8 @@
 #include <st/c0/stm32c031X6.dtsi>
 #include <st/c0/stm32c031c(4-6)tx-pinctrl.dtsi>
 
+#define USE_SPI_DMA 0
+
 / {
 	model = "Brown Studios Bed Lift board";
 	compatible = "brownstudios,bedlift";
@@ -50,7 +52,9 @@
 };
 
 &timers14 {
-	st,prescaler = <2>;
+	/* Divide the 24 MHz by 3+1 to get a 6 MHz clock for timing signals
+	 * in the range of 100 to 10000 Hz. */
+	st,prescaler = <3>;
 	status = "okay";
 
 	span_counter: counter {
@@ -69,9 +73,14 @@
 &spi1 {
 	pinctrl-0 = <&spi1_sck_pa5>, <&spi1_miso_pa6>, <&spi1_mosi_pa7>;
 	pinctrl-names = "default";
-	clock-frequency = <DT_FREQ_M(1)>;
 	cs-gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
 	status = "okay";
+
+#if USE_SPI_DMA
+	dmas = <&dma1 3 17 (STM32_DMA_PERIPH_TX | STM32_DMA_PRIORITY_HIGH)>,
+			<&dma1 2 16 (STM32_DMA_PERIPH_RX | STM32_DMA_PRIORITY_HIGH)>;
+	dma-names = "tx", "rx";
+#endif
 
 	span_stepper: spi-device@0 {
 		compatible = "ti,drv8434s";
@@ -96,6 +105,7 @@
 		 *   8: 0.8 A
 		 */
 		trq-dac = <8>;
+		stall-th = <5>;
 	};
 };
 
@@ -109,3 +119,9 @@
 &iwdg {
 	status = "okay";
 };
+
+#if USE_SPI_DMA
+&dma1 {
+	status = "okay";
+};
+#endif

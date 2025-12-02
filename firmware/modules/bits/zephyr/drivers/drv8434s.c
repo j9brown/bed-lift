@@ -25,12 +25,14 @@ struct drv8434s_config {
 struct drv8434s_data {
 	uint8_t *tx_buf;
 	uint8_t *rx_buf;
+	bool started;
+#ifdef CONFIG_SPI_ASYNC
+	bool async_busy;
 	drv8434s_callback_t async_callback;
 	void *async_user_data;
 	uint8_t *async_status_buf;
 	uint8_t *async_report_buf;
-	bool started;
-	bool busy;
+#endif
 };
 
 enum drv8434s_reg {
@@ -60,6 +62,8 @@ enum drv8434s_reg {
 #define DRV8434S_STL_REP_DEFAULT (1)
 #define DRV8434S_EN_SSC_REP_DEFAULT (1)
 #define DRV8434S_TRQ_SCALE_DEFAULT (0)
+
+#define DRV8434S_DIAG_STATUS2_STL_LRN_OK (0x10)
 
 #define DRV8434S_BUF_SIZE(num_devices) ((num_devices) * 2 + 2)
 
@@ -110,6 +114,10 @@ static inline uint8_t drv8434s_make_ctrl2(const struct drv8434s_config *config, 
 	return (output_enable ? 0x80 : 0x00) | ((config->toff & 0x02) << 3) | ((config->decay & 0x07) << 0);
 }
 
+static inline uint8_t drv8434s_make_ctrl5(const struct drv8434s_config *config, bool stall_learn) {
+	return (stall_learn ? 0x30 : config->stall_th ? 0x10 : 0) | (DRV8434S_STL_REP_DEFAULT << 3);
+}
+
 static int drv8434s_transceive_complete(const struct drv8434s_config *config, struct drv8434s_data *data,
 		uint8_t *status_buf, uint8_t *report_buf) {
 	const unsigned num_devices = config->num_devices;
@@ -136,6 +144,7 @@ static int drv8434s_transceive_complete(const struct drv8434s_config *config, st
 	return 0;
 }
 
+#ifdef CONFIG_SPI_ASYNC
 static void drv8434s_spi_callback(const struct device *spi_dev, int result, void *user_data) {
 	const struct device *dev = user_data;
 	const struct drv8434s_config *config = dev->config;
@@ -144,8 +153,9 @@ static void drv8434s_spi_callback(const struct device *spi_dev, int result, void
 		result = drv8434s_transceive_complete(config, data, data->async_status_buf, data->async_report_buf);
 	}
 	data->async_callback(dev, result, data->async_user_data);
-	data->busy = false;
+	data->async_busy = false;
 }
+#endif
 
 static int drv8434s_transceive(const struct device *dev, uint8_t *status_buf, uint8_t *report_buf,
 		drv8434s_callback_t callback, void *user_data) {
@@ -158,30 +168,25 @@ static int drv8434s_transceive(const struct device *dev, uint8_t *status_buf, ui
 	const struct spi_buf_set spi_rx_buf_set = { .buffers = &spi_rx_buf, .count = 1 };
 
 	int err;
+#ifdef CONFIG_SPI_ASYNC
 	if (callback) {
-		data->busy = true;
+		data->async_busy = true;
 		data->async_callback = callback;
 		data->async_user_data = user_data;
 		data->async_status_buf = status_buf;
 		data->async_report_buf = report_buf;
 		if ((err = spi_transceive_cb(config->spi.bus, &config->spi.config, &spi_tx_buf_set, &spi_rx_buf_set,
 				drv8434s_spi_callback, (void*)dev))) {
-			data->busy = false;
+			data->async_busy = false;
 			return err;
 		}
 		return 0;
 	}
+#endif
 	if ((err = spi_transceive_dt(&config->spi, &spi_tx_buf_set, &spi_rx_buf_set))) {
 		return err;
 	}
 	return drv8434s_transceive_complete(config, data, status_buf, report_buf);
-}
-
-static int drv8434s_maybe_set_sleep(const struct drv8434s_config *config, bool sleep) {
-	if (!config->sleep_gpio.port) {
-		return 0;
-	}
-	return gpio_pin_set_dt(&config->sleep_gpio, sleep);
 }
 
 static int drv8434s_init(const struct device *dev) {
@@ -211,13 +216,17 @@ int drv8434s_start(const struct device *dev, unsigned num_devices) {
 	struct drv8434s_data *data = dev->data;
 	if (num_devices != config->num_devices) return -EINVAL;
 	if (data->started) return -EINVAL;
-	if (data->busy) return -EBUSY;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
 
 	int err;
-	if ((err = drv8434s_maybe_set_sleep(config, false))) {
-		return err;
+	if (config->sleep_gpio.port) {
+		if ((err = gpio_pin_set_dt(&config->sleep_gpio, false))) {
+			return err;
+		}
+		k_msleep(2); // Datasheet says wake-up time is between 0.8 and 1.2 ms
 	}
-	k_msleep(2); // Datasheet says wake-up time is between 0.8 and 1.2 ms
 
 	uint8_t *tx_buf = data->tx_buf;
 	drv8434s_tx_buf_header2(tx_buf, true); // clear faults
@@ -248,7 +257,7 @@ int drv8434s_start(const struct device *dev, unsigned num_devices) {
 	}
 
 	drv8434s_tx_buf_reg_write_all(tx_buf, num_devices, DRV8434S_REG_CTRL5,
-		(config->stall_th ? 1 << 4 : 0) | (DRV8434S_STL_REP_DEFAULT << 3));
+		drv8434s_make_ctrl5(config, false));
 	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
 		goto error_maybe_sleep;
 	}
@@ -261,7 +270,7 @@ int drv8434s_start(const struct device *dev, unsigned num_devices) {
 
 	drv8434s_tx_buf_reg_write_all(tx_buf, num_devices, DRV8434S_REG_CTRL7,
 		((config->rc_ripple & 0x03) << 6) | (DRV8434S_EN_SSC_REP_DEFAULT << 5) |
-		(DRV8434S_TRQ_SCALE_DEFAULT << 4) | (config->stall_th & 0xf00) >> 8);
+		(DRV8434S_TRQ_SCALE_DEFAULT << 4) | ((config->stall_th & 0xf00) >> 8));
 	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
 		goto error_maybe_sleep;
 	}
@@ -270,14 +279,18 @@ int drv8434s_start(const struct device *dev, unsigned num_devices) {
 	return 0;
 
 error_maybe_sleep:
-	drv8434s_maybe_set_sleep(config, true);
+	if (config->sleep_gpio.port) {
+		gpio_pin_set_dt(&config->sleep_gpio, true);
+	}
 	return err;
 }
 
 int drv8434s_stop(const struct device *dev) {
 	struct drv8434s_data *data = dev->data;
 	if (!data->started) return -EINVAL;
-	if (data->busy) return -EBUSY;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
 
 	const struct drv8434s_config *config = dev->config;
 	const unsigned num_devices = config->num_devices;
@@ -286,7 +299,7 @@ int drv8434s_stop(const struct device *dev) {
 	drv8434s_tx_buf_reg_write_all(tx_buf, num_devices, DRV8434S_REG_CTRL2,
 		drv8434s_make_ctrl2(config, false));
 	int err1 = drv8434s_transceive(dev, NULL, NULL, NULL, NULL);
-	int err2 = drv8434s_maybe_set_sleep(config, true);
+	int err2 = config->sleep_gpio.port ? gpio_pin_set_dt(&config->sleep_gpio, true) : 0;
 	data->started = false;
 	return err1 ? err1 : err2;
 }
@@ -305,14 +318,16 @@ int drv8434s_get_fault_status(const struct device *dev, const struct drv8434s_op
 
 	struct drv8434s_data *data = dev->data;
 	if (!data->started) return -EINVAL;
-	if (data->busy) return -EBUSY;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
 
 	const struct drv8434s_config *config = dev->config;
 	const unsigned num_devices = config->num_devices;
 	uint8_t *tx_buf = data->tx_buf;
-	drv8434s_tx_buf_header2(tx_buf, options && options->clear_fault);
+	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
 	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_FAULT_STATUS);
-	return drv8434s_transceive(dev, options ? options->status_buf : NULL, ex_status_buf, NULL, NULL);
+	return drv8434s_transceive(dev, options->status_buf, ex_status_buf, NULL, NULL);
 }
 
 int drv8434s_set_output_enable(const struct device *dev, const struct drv8434s_options *options,
@@ -321,17 +336,19 @@ int drv8434s_set_output_enable(const struct device *dev, const struct drv8434s_o
 
 	struct drv8434s_data *data = dev->data;
 	if (!data->started) return -EINVAL;
-	if (data->busy) return -EBUSY;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
 
 	const struct drv8434s_config *config = dev->config;
 	const unsigned num_devices = config->num_devices;
 	uint8_t *tx_buf = data->tx_buf;
-	drv8434s_tx_buf_header2(tx_buf, options && options->clear_fault);
+	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
 	for (unsigned i = 0; i < num_devices; i++) {
 		drv8434s_tx_buf_reg_write_one(tx_buf, num_devices, i, DRV8434S_REG_CTRL2,
 			drv8434s_make_ctrl2(config, IS_BIT_SET(enabled_set, i)));
 	}
-	return drv8434s_transceive(dev, options ? options->status_buf : NULL, NULL, NULL, NULL);
+	return drv8434s_transceive(dev, options->status_buf, NULL, NULL, NULL);
 }
 
 int drv8434s_step_async(const struct device *dev, const struct drv8434s_options *options,
@@ -341,17 +358,89 @@ int drv8434s_step_async(const struct device *dev, const struct drv8434s_options 
 
 	struct drv8434s_data *data = dev->data;
 	if (!data->started) return -EINVAL;
-	if (data->busy) return -EBUSY;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
 
 	const struct drv8434s_config *config = dev->config;
 	const unsigned num_devices = config->num_devices;
 	uint8_t *tx_buf = data->tx_buf;
-	drv8434s_tx_buf_header2(tx_buf, options && options->clear_fault);
+	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
 	for (unsigned i = 0; i < num_devices; i++) {
 		drv8434s_tx_buf_reg_write_one(tx_buf, num_devices, i, DRV8434S_REG_CTRL3,
 			step_requests[i]);
 	}
-	return drv8434s_transceive(dev, options ? options->status_buf : NULL, NULL, callback, user_data);
+	return drv8434s_transceive(dev, options->status_buf, NULL, callback, user_data);
+}
+
+int drv8434s_step(const struct device *dev, const struct drv8434s_options *options,
+        const uint8_t* step_requests) {
+    return drv8434s_step_async(dev, options, step_requests, NULL, NULL);
+}
+
+int drv8434s_set_stall_learn_mode(const struct device *dev, const struct drv8434s_options *options,
+        bool stall_learn) {
+	__ASSERT(options, "options must not be NULL");
+
+	struct drv8434s_data *data = dev->data;
+	if (!data->started) return -EINVAL;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
+
+	const struct drv8434s_config *config = dev->config;
+	const unsigned num_devices = config->num_devices;
+	uint8_t *tx_buf = data->tx_buf;
+	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
+	drv8434s_tx_buf_reg_write_all(tx_buf, num_devices, DRV8434S_REG_CTRL5,
+		drv8434s_make_ctrl5(config, stall_learn));
+	return drv8434s_transceive(dev, options->status_buf, NULL, NULL, NULL);
+}
+
+int drv8434s_get_stall_learn_result(const struct device *dev, const struct drv8434s_options *options,
+        uint64_t *learned_set, uint16_t *stall_th_buf) {
+	__ASSERT(options, "options must not be NULL");
+
+	struct drv8434s_data *data = dev->data;
+	if (!data->started) return -EINVAL;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
+
+	const struct drv8434s_config *config = dev->config;
+	const unsigned num_devices = config->num_devices;
+	uint8_t *tx_buf = data->tx_buf;
+	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_DIAG_STATUS2);
+	int err;
+	if ((err = drv8434s_transceive(dev, options->status_buf, NULL, NULL, NULL))) {
+		return err;
+	}
+
+	*learned_set = 0;
+	uint8_t *rx_buf = data->rx_buf;
+	for (unsigned i = 0; i < num_devices; i++) {
+		if (drv8434s_rx_buf_report(rx_buf, num_devices, i) & DRV8434S_DIAG_STATUS2_STL_LRN_OK) {
+			*learned_set |= BIT64(i);
+		}
+	}
+
+	drv8434s_tx_buf_header2(tx_buf, false);
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_CTRL6);
+	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
+		return err;
+	}
+	for (unsigned i = 0; i < num_devices; i++) {
+		stall_th_buf[i] = drv8434s_rx_buf_report(rx_buf, num_devices, i);
+	}
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_CTRL7);
+	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
+		return err;
+	}
+	for (unsigned i = 0; i < num_devices; i++) {
+		stall_th_buf[i] |= (drv8434s_rx_buf_report(rx_buf, num_devices, i) & 0x0f) << 8;
+	}
+	return 0;
 }
 
 // TODO: In Zephyr 4.3, the delay property (50) in SPI_DT_SPEC_INST_GET has moved to the devicetree.
