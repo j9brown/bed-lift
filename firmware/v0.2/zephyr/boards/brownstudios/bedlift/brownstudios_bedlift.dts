@@ -50,10 +50,11 @@
 };
 
 &timers14 {
-	st,prescaler = <0>;
+	st,prescaler = <2>;
 	status = "okay";
 
-	span_step_counter: counter {
+	span_counter: counter {
+		compatible = "st,stm32-counter";
 		status = "okay";
 	};
 };
@@ -72,7 +73,7 @@
 	cs-gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
-	span_step_driver: spi-device@0 {
+	span_stepper: spi-device@0 {
 		compatible = "ti,drv8434s";
 
 		status = "okay";
@@ -87,14 +88,14 @@
 		fault-gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
 		sleep-gpios = <&gpioa 3 GPIO_ACTIVE_LOW>;
 
-		/* Average current measurements for different values at 1000 steps / second
-		 *
+		/* Current limit setting
 		 *   4: 1.7 A
 		 *   5: 1.4 A, circuit board very hot under the chip
 		 *   6: 1.2 A
 		 *   7: 1.0 A
+		 *   8: 0.8 A
 		 */
-		trq-dac = <7>;
+		trq-dac = <8>;
 	};
 };
 
@@ -103,4 +104,8 @@
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	/* status = "okay"; */
+};
+
+&iwdg {
+	status = "okay";
 };

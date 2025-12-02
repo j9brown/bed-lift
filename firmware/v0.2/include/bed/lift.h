@@ -16,24 +16,28 @@ enum lift_position {
     LIFT_POSITION_UPPER_LIMIT = 5,
 };
 
-enum lift_action {
-    /** @brief Stop the lift. */
-    LIFT_ACTION_STOP = 0,
-    /** @brief Raise the lift until the upper limit position is achieved. */
-    LIFT_ACTION_RAISE = 1,
-    /** @brief Lower the lift until the lower limit position is achieved. */
-    LIFT_ACTION_LOWER = 2,
-};
-
 int lift_init(void);
+enum lift_position lift_get_position(void);
 
-/**
- * @brief Perform an action incrementally while keeping the motors synchronized.
+/*
+ * The poll functions perform an action incrementally while keeping the actuators synchronized.
  * 
  * @retval 0 If the action is done.
  * @retval 1 If the action is still in progress.
  * @return -errno If an error occurred.
  */
-int lift_poll(enum lift_action action);
 
-enum lift_position lift_get_position(void);
+/**
+ * @brief Maintain current position.
+ */
+int lift_poll_standby(void);
+
+/**
+ * @brief Raise the lift until the upper limit position is achieved.
+ */
+int lift_poll_raise(void);
+
+/**
+ * @brief Lower the lift until the lower limit position is achieved.
+ */
+int lift_poll_lower(void);

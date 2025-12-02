@@ -132,13 +132,18 @@ enum drv8434s_microstep_mode {
     DRV8434S_MICROSTEP_16 = 6,
     /** @brief Circular 1/32 step. */
     DRV8434S_MICROSTEP_32 = 7,
-    /** @brief Circular 1/32 step. */
+    /** @brief Circular 1/64 step. */
     DRV8434S_MICROSTEP_64 = 8,
-    /** @brief Circular 1/32 step. */
+    /** @brief Circular 1/128 step. */
     DRV8434S_MICROSTEP_128 = 9,
-    /** @brief Circular 1/32 step. */
+    /** @brief Circular 1/256 step. */
     DRV8434S_MICROSTEP_256 = 10,
 };
+
+/** @brief Step request flag: Advance the indexer by one step. */
+#define DRV8434S_STEP_REQUEST_STEP (0x40)
+/** @brief Step request flag: Stepping direction. */
+#define DRV8434S_STEP_REQUEST_DIR (0x80)
 
 /**
  * @brief Encode a step request.
@@ -150,7 +155,7 @@ enum drv8434s_microstep_mode {
  */
 static inline uint8_t drv8434s_make_step_request(bool step, bool dir,
         enum drv8434s_microstep_mode microstep_mode) {
-    return (step ? 0x40 : 0x00) | (dir ? 0x80 : 0x00) | microstep_mode | 0x30;
+    return (step ? DRV8434S_STEP_REQUEST_STEP : 0) | (dir ? DRV8434S_STEP_REQUEST_DIR : 0) | microstep_mode | 0x30;
 }
 
 /**

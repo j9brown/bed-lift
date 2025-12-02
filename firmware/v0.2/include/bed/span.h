@@ -7,22 +7,50 @@
 
 #include <stdint.h>
 
-int span_init(void);
-
-enum span_action {
-    /** @brief Stop the span actuators. */
-    SPAN_ACTION_STOP = 0,
-    /** @brief Extend all spans until all of the motors stall at the assumed limit position. */
-    SPAN_ACTION_EXTEND = 1,
-    /** @brief Retract all spans until all of the motors stall at the assumed limit position. */
-    SPAN_ACTION_RETRACT = 2,
+enum span_position {
+    SPAN_POSITION_UNKNOWN = 0,
+    SPAN_POSITION_EXTENDED = 1,
+    SPAN_POSITION_RETRACTED = 2,
 };
 
-/**
- * @brief Perform an action incrementally while keeping the motors synchronized.
+int span_init(void);
+enum span_position span_get_position(void);
+
+/*
+ * The poll functions perform an action incrementally while keeping the actuators synchronized.
  * 
  * @retval 0 If the action is done.
  * @retval 1 If the action is still in progress.
  * @return -errno If an error occurred.
  */
-int span_poll(enum span_action action);
+
+/**
+ * @brief Stop the span actuators and put the motor drivers to sleep.
+ */
+int span_poll_sleep(void);
+
+/**
+ * @brief Wake the motor drivers from sleep and keep the outputs disabled.
+ *
+ * Because the lift and span drivers share the same sleep signal, this state can be used to keep
+ * the span drivers on standby while the lift moves.
+ */
+int span_poll_standby(void);
+
+/**
+ * @brief Extend all spans until all of the actuators stall at the endstop.
+ */
+int span_poll_extend(void);
+
+/**
+ * @brief Retract all spans until all of the actuators stall at the endstop.
+ */
+int span_poll_retract(void);
+
+/**
+ * @brief Jog specific actuators in a particular direction under manual control.
+ * 
+ * @param extend Whether to extend the actuators or retract them.
+ * @param actuator_mask Combine BIT(0), BIT(1), BIT(2), or BIT(3) to address specific actuators.
+ */
+int span_poll_jog(bool extend, unsigned actuator_mask);

@@ -31,12 +31,20 @@ enum bed_state bed_get_state(void);
 enum bed_pose bed_get_current_pose(void);
 enum bed_pose bed_get_target_pose(void);
 
-/**
- * @brief Perform an action incrementally while keeping the motors synchronized.
+/*
+ * The poll functions perform an action incrementally while keeping the actuators synchronized.
  * 
  * @retval 0 If the action is done.
  * @retval 1 If the action is still in progress.
  * @return -errno If an error occurred.
  */
+
+/**
+ * @brief Stop the actuators and put the motor drivers to sleep.
+ */
 int bed_poll_stop(void);
-int bed_poll_pose(enum bed_pose next_pose);
+
+/**
+ * @brief Move the bed into the specified pose.
+ */
+int bed_poll_pose(enum bed_pose pose);
