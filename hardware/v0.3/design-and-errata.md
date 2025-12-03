@@ -48,4 +48,18 @@ Shuffled GPIOs:
 
 TODO:
 
-- Add bulk capacitors for every motor driver, perhaps 47 uF aluminum polymer to distribute the current.
+- Use TIM1 for LED PWM and general purpose timing at ~1 kHz, 4 external channels + 2 internal channels
+- Use TIM3 for lift motor PWM at ~25 kHz, 4 external channels
+- Use TIM14/16/17 for span motor STEP
+
+- Upgrade to LQFP48 to alleviate pin scarcity
+- Upgrade to more flash memory, maybe 64 KB for future proofing
+- Maybe add bulk capacitors for every motor driver, perhaps 47 uF aluminum polymer to distribute the switching current, although it seems to be working fine.
+- Maybe add a connector for a PWM fan.
+- Add the heatsinks to the BOM and model.
+- Maybe remove the serial port connector and repurpose the pins.
+- Maybe split the `DRV_SLEEP` signal for the two groups of motor drivers to remove a dependency between the drivers in firmware.
+- Supply the STEP signal from a timer capable GPIO.
+- Supply the DIR signal from a GPIO.
+- Provide PWM capable outputs for the lift motors.
+- Gate the motor driver SLEEP through an e-stop switch connection.
