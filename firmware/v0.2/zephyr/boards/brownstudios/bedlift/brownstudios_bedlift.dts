@@ -20,12 +20,32 @@
 		control-down-gpios = <&gpiob 9 GPIO_ACTIVE_LOW>;
 	};
 
+	pwm_set {
+		compatible = "pwm-set";
+
+		span_step: span_step {
+			pwms = <&pwm17 1 PWM_USEC(100) PWM_POLARITY_NORMAL>;
+		};
+		lift1_in1: lift1_in1 {
+			pwms = <&pwm3 3 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+		};
+		lift1_in2: lift1_in2 {
+			pwms = <&pwm3 2 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+		};
+		lift2_in1: lift2_in1 {
+			pwms = <&pwm3 1 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+		};
+		lift2_in2: lift2_in2 {
+			pwms = <&pwm3 4 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+		};
+	};
+
 	indicator_status: indicator_status {
 		compatible = "color-indicator";
 
-		pwms = <&pwm1 1 PWM_USEC(500) PWM_POLARITY_NORMAL>,
-			<&pwm1 2 PWM_USEC(500) PWM_POLARITY_NORMAL>,
-			<&pwm1 3 PWM_USEC(500) PWM_POLARITY_NORMAL>;
+		pwms = <&pwm1 1 PWM_USEC(1000) PWM_POLARITY_NORMAL>,
+			<&pwm1 2 PWM_USEC(1000) PWM_POLARITY_NORMAL>,
+			<&pwm1 3 PWM_USEC(1000) PWM_POLARITY_NORMAL>;
 	};
 };
 
@@ -41,24 +61,50 @@
 };
 
 &timers1 {
+	/* Divide the 24 MHz clock by 0+1 for timing 1000 Hz LED PWM. */
 	st,prescaler = <0>;
 	status = "okay";
 
 	pwm1: pwm {
+		/* red, green, blue */
 		pinctrl-0 = <&tim1_ch1_pa0>, <&tim1_ch2_pa1>, <&tim1_ch3_pa2>;
 		pinctrl-names = "default";
 		status = "okay";
 	};
 };
 
+&timers3 {
+	/* Divide the 24 MHz clock by 0+1 for timing 25000 Hz motor PWM. */
+	st,prescaler = <0>;
+	status = "okay";
+
+	pwm3: pwm {
+		/* lift2_in1, lift1_in2, lift1_in1, lift2_in2 */
+		pinctrl-0 = <&tim3_ch1_pc6>, <&tim3_ch2_pb3>, <&tim3_ch3_pb0>, <&tim3_ch4_pa8>;
+		pinctrl-names = "default";
+		status = "okay";
+	};
+};
+
 &timers14 {
-	/* Divide the 24 MHz by 3+1 to get a 6 MHz clock for timing signals
-	 * in the range of 100 to 10000 Hz. */
+	/* Divide the 24 MHz clock by 7+1 for timing 100 Hz span loop ticks. */
+	st,prescaler = <7>;
+	status = "okay";
+
+    span_loop_tick: counter {
+		compatible = "st,stm32-counter";
+		status = "okay";
+	};
+};
+
+&timers17 {
+	/* Divide the 24 MHz clock by 3+1 for timing 100 to 25000 Hz span step pulses. */
 	st,prescaler = <3>;
 	status = "okay";
 
-	span_counter: counter {
-		compatible = "st,stm32-counter";
+	pwm17: pwm {
+		pinctrl-0 = <&tim17_ch1_pc14>;
+		pinctrl-names = "default";
 		status = "okay";
 	};
 };
@@ -105,7 +151,13 @@
 		 *   8: 0.8 A
 		 */
 		trq-dac = <8>;
-		stall-th = <5>;
+
+		/* Stall threshold
+		 * This value seems to be sensitive to step speed.  At 25 mm/s, stall learning
+		 * yields a recommended threshold of 2000 but at 5 mm/s it needs to be less than
+		 * 100 to avoid premature stalls.
+		 */
+		stall-th = <50>;
 	};
 };
 
