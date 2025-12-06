@@ -25,10 +25,13 @@ struct drv8434s_config {
 struct drv8434s_data {
 	uint8_t *tx_buf;
 	uint8_t *rx_buf;
+	struct gpio_callback fault_gpio_callback;
+	drv8434s_fault_callback_t fault_callback;
+	void *fault_user_data;
 	bool started;
 #ifdef CONFIG_SPI_ASYNC
 	bool async_busy;
-	drv8434s_callback_t async_callback;
+	drv8434s_step_callback_t async_callback;
 	void *async_user_data;
 	uint8_t *async_status_buf;
 	uint8_t *async_report_buf;
@@ -64,6 +67,10 @@ enum drv8434s_reg {
 #define DRV8434S_TRQ_SCALE_DEFAULT (0)
 
 #define DRV8434S_DIAG_STATUS2_STL_LRN_OK (0x10)
+
+#define DRV8434S_CTRL5_STL_LRN (0x20)
+#define DRV8434S_CTRL5_EN_STL (0x10)
+#define DRV8434S_CTRL5_STL_REP (0x08)
 
 #define DRV8434S_BUF_SIZE(num_devices) ((num_devices) * 2 + 2)
 
@@ -115,7 +122,9 @@ static inline uint8_t drv8434s_make_ctrl2(const struct drv8434s_config *config, 
 }
 
 static inline uint8_t drv8434s_make_ctrl5(const struct drv8434s_config *config, bool stall_learn) {
-	return (stall_learn ? 0x30 : config->stall_th ? 0x10 : 0) | (DRV8434S_STL_REP_DEFAULT << 3);
+	return (stall_learn ? DRV8434S_CTRL5_STL_LRN | DRV8434S_CTRL5_EN_STL :
+			config->stall_th ? DRV8434S_CTRL5_EN_STL : 0) |
+			(DRV8434S_STL_REP_DEFAULT ? DRV8434S_CTRL5_STL_REP : 0);
 }
 
 static int drv8434s_transceive_complete(const struct drv8434s_config *config, struct drv8434s_data *data,
@@ -158,7 +167,7 @@ static void drv8434s_spi_callback(const struct device *spi_dev, int result, void
 #endif
 
 static int drv8434s_transceive(const struct device *dev, uint8_t *status_buf, uint8_t *report_buf,
-		drv8434s_callback_t callback, void *user_data) {
+		drv8434s_step_callback_t callback, void *user_data) {
 	const struct drv8434s_config *config = dev->config;
 	const unsigned num_devices = config->num_devices;
 	struct drv8434s_data *data = dev->data;
@@ -189,8 +198,41 @@ static int drv8434s_transceive(const struct device *dev, uint8_t *status_buf, ui
 	return drv8434s_transceive_complete(config, data, status_buf, report_buf);
 }
 
+static void drv8434s_fault_callback(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
+	struct drv8434s_data *data = CONTAINER_OF(cb, struct drv8434s_data, fault_gpio_callback);
+	data->fault_callback(data->fault_user_data);
+}
+
+int drv8434s_set_fault_callback(const struct device *dev, drv8434s_fault_callback_t callback, void *user_data) {
+	const struct drv8434s_config *config = dev->config;
+	struct drv8434s_data *data = dev->data;
+
+	int err;
+	if (data->fault_callback) {
+		if ((err = gpio_remove_callback(config->fault_gpio.port, &data->fault_gpio_callback))) {
+			return err;
+		}
+		if ((err = gpio_pin_interrupt_configure_dt(&config->fault_gpio, GPIO_INT_DISABLE))) {
+			return err;
+		}
+		data->fault_callback = NULL;
+	}
+	if (callback) {
+		data->fault_callback = callback;
+		data->fault_user_data = user_data;
+		if ((err = gpio_pin_interrupt_configure_dt(&config->fault_gpio, GPIO_INT_EDGE_RISING))) {
+			return err;
+		}
+		if ((err = gpio_add_callback(config->fault_gpio.port, &data->fault_gpio_callback))) {
+			return err;
+		}
+	}
+	return 0;
+}
+
 static int drv8434s_init(const struct device *dev) {
 	const struct drv8434s_config *config = dev->config;
+	struct drv8434s_data *data = dev->data;
 	if (!spi_is_ready_dt(&config->spi) ||
 			(config->fault_gpio.port && !gpio_is_ready_dt(&config->fault_gpio)) ||
 			(config->sleep_gpio.port && !gpio_is_ready_dt(&config->sleep_gpio))) {
@@ -198,15 +240,17 @@ static int drv8434s_init(const struct device *dev) {
 	}
 
 	int err;
-	if (config->fault_gpio.port && (err = gpio_pin_configure_dt(&config->fault_gpio, GPIO_INPUT))) {
-		return err;
+	if (config->fault_gpio.port) {
+		if ((err = gpio_pin_configure_dt(&config->fault_gpio, GPIO_INPUT))) {
+			return err;
+		}
+	    gpio_init_callback(&data->fault_gpio_callback, drv8434s_fault_callback, BIT(config->fault_gpio.pin));
 	}
 	if (config->sleep_gpio.port && (err = gpio_pin_configure_dt(&config->sleep_gpio, GPIO_OUTPUT_ACTIVE))) {
 		return err;
 	}
 
 	// All transfers use the same initial header byte so we set it just once here.
-	const struct drv8434s_data *data = dev->data;
 	drv8434s_tx_buf_header1(data->tx_buf, config->num_devices);
 	return 0;
 }
@@ -352,7 +396,7 @@ int drv8434s_set_output_enable(const struct device *dev, const struct drv8434s_o
 }
 
 int drv8434s_step_async(const struct device *dev, const struct drv8434s_options *options,
-        const uint8_t *step_requests, drv8434s_callback_t callback, void *user_data) {
+        const uint8_t *step_requests, drv8434s_step_callback_t callback, void *user_data) {
 	__ASSERT(options, "options must not be NULL");
 	__ASSERT(step_requests, "step_requests must not be NULL");
 
@@ -378,8 +422,8 @@ int drv8434s_step(const struct device *dev, const struct drv8434s_options *optio
     return drv8434s_step_async(dev, options, step_requests, NULL, NULL);
 }
 
-int drv8434s_set_stall_learn_mode(const struct device *dev, const struct drv8434s_options *options,
-        bool stall_learn) {
+int drv8434s_set_stall_learn_active(const struct device *dev, const struct drv8434s_options *options,
+        uint64_t stall_learn_active_set) {
 	__ASSERT(options, "options must not be NULL");
 
 	struct drv8434s_data *data = dev->data;
@@ -392,13 +436,15 @@ int drv8434s_set_stall_learn_mode(const struct device *dev, const struct drv8434
 	const unsigned num_devices = config->num_devices;
 	uint8_t *tx_buf = data->tx_buf;
 	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
-	drv8434s_tx_buf_reg_write_all(tx_buf, num_devices, DRV8434S_REG_CTRL5,
-		drv8434s_make_ctrl5(config, stall_learn));
+	for (unsigned i = 0; i < num_devices; i++) {
+		drv8434s_tx_buf_reg_write_one(tx_buf, num_devices, i, DRV8434S_REG_CTRL5,
+				drv8434s_make_ctrl5(config, IS_BIT_SET(stall_learn_active_set, i)));
+	}
 	return drv8434s_transceive(dev, options->status_buf, NULL, NULL, NULL);
 }
 
-int drv8434s_get_stall_learn_result(const struct device *dev, const struct drv8434s_options *options,
-        uint64_t *learned_set, uint16_t *stall_th_buf) {
+int drv8434s_get_stall_learn_status(const struct device *dev, const struct drv8434s_options *options,
+		uint64_t *stall_learn_active_set, uint64_t *stall_learn_ok_set, uint16_t *stall_th_buf) {
 	__ASSERT(options, "options must not be NULL");
 
 	struct drv8434s_data *data = dev->data;
@@ -410,22 +456,30 @@ int drv8434s_get_stall_learn_result(const struct device *dev, const struct drv84
 	const struct drv8434s_config *config = dev->config;
 	const unsigned num_devices = config->num_devices;
 	uint8_t *tx_buf = data->tx_buf;
+	uint8_t *rx_buf = data->rx_buf;
 	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
-	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_DIAG_STATUS2);
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_CTRL5);
 	int err;
 	if ((err = drv8434s_transceive(dev, options->status_buf, NULL, NULL, NULL))) {
 		return err;
 	}
-
-	*learned_set = 0;
-	uint8_t *rx_buf = data->rx_buf;
+	*stall_learn_active_set = 0;
 	for (unsigned i = 0; i < num_devices; i++) {
-		if (drv8434s_rx_buf_report(rx_buf, num_devices, i) & DRV8434S_DIAG_STATUS2_STL_LRN_OK) {
-			*learned_set |= BIT64(i);
+		if (drv8434s_rx_buf_report(rx_buf, num_devices, i) & DRV8434S_CTRL5_STL_LRN) {
+			*stall_learn_active_set |= BIT64(i);
 		}
 	}
-
 	drv8434s_tx_buf_header2(tx_buf, false);
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_DIAG_STATUS2);
+	if ((err = drv8434s_transceive(dev, options->status_buf, NULL, NULL, NULL))) {
+		return err;
+	}
+	*stall_learn_ok_set = 0;
+	for (unsigned i = 0; i < num_devices; i++) {
+		if (drv8434s_rx_buf_report(rx_buf, num_devices, i) & DRV8434S_DIAG_STATUS2_STL_LRN_OK) {
+			*stall_learn_ok_set |= BIT64(i);
+		}
+	}
 	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_CTRL6);
 	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
 		return err;
@@ -439,6 +493,39 @@ int drv8434s_get_stall_learn_result(const struct device *dev, const struct drv84
 	}
 	for (unsigned i = 0; i < num_devices; i++) {
 		stall_th_buf[i] |= (drv8434s_rx_buf_report(rx_buf, num_devices, i) & 0x0f) << 8;
+	}
+	return 0;
+}
+
+int drv8434s_get_trq_count(const struct device *dev, const struct drv8434s_options *options,
+        uint16_t *trq_count_buf) {
+	__ASSERT(options, "options must not be NULL");
+
+	struct drv8434s_data *data = dev->data;
+	if (!data->started) return -EINVAL;
+#ifdef CONFIG_SPI_ASYNC
+	if (data->async_busy) return -EBUSY;
+#endif
+
+	const struct drv8434s_config *config = dev->config;
+	const unsigned num_devices = config->num_devices;
+	uint8_t *tx_buf = data->tx_buf;
+	uint8_t *rx_buf = data->rx_buf;
+	drv8434s_tx_buf_header2(tx_buf, options->clear_fault);
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_CTRL8);
+	int err;
+	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
+		return err;
+	}
+	for (unsigned i = 0; i < num_devices; i++) {
+		trq_count_buf[i] = drv8434s_rx_buf_report(rx_buf, num_devices, i);
+	}
+	drv8434s_tx_buf_reg_read_all(tx_buf, num_devices, DRV8434S_REG_CTRL9);
+	if ((err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL))) {
+		return err;
+	}
+	for (unsigned i = 0; i < num_devices; i++) {
+		trq_count_buf[i] |= (drv8434s_rx_buf_report(rx_buf, num_devices, i) & 0x0f) << 8;
 	}
 	return 0;
 }

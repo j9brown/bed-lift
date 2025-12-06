@@ -81,6 +81,25 @@ struct drv8434s_options {
 int drv8434s_has_fault(const struct device *dev);
 
 /**
+ * @brief Callback invoked when the fault pin becomes active.
+ *
+ * @param user_data User data for the callback.
+ */
+typedef void (*drv8434s_fault_callback_t)(void *user_data);
+
+/**
+ * @brief Sets a callback to invoke when the fault pin becomes active.
+ *
+ * @param dev DRV8434S device node.
+ * @param callback The callback to set, or NULL to remove it.
+ * @param user_data User data for the callback.
+ * @retval 0 If successful.
+ * @retval -ENOTSUP if the fault pin is not configured in the devicetree.
+ * @retval -errno Negative errno code on failure.
+ */
+int drv8434s_set_fault_callback(const struct device *dev, drv8434s_fault_callback_t callback, void *user_data);
+
+/**
  * @brief Get the fault status of the chain of motor driver devices.
  * 
  * @param dev DRV8434S device node.
@@ -109,6 +128,30 @@ int drv8434s_get_fault_status(const struct device *dev, const struct drv8434s_op
  */
 int drv8434s_set_output_enable(const struct device *dev, const struct drv8434s_options *options,
         uint64_t enabled_set);
+
+/**
+ * @brief Determines the indexer step input.
+ */
+enum drv8434s_step_input {
+    /** @brief The step input follows the driver's STEP pin. */
+    DRV8434S_STEP_PIN = 0x00,
+    /** @brief The step input is disabled. */
+    DRV8434S_STEP_DISABLE = 0x10,
+    /** @brief Each step request triggers a one-shot pulse of the step input. */
+    DRV8434S_STEP_PULSE = 0x50,
+};
+
+/**
+ * @brief Determines the indexer direction input.
+ */
+enum drv8434s_dir_input {
+    /** @brief The direction input follows the driver's DIR pin. */
+    DRV8434S_DIR_PIN = 0x00,
+    /** @brief The direction input is low. */
+    DRV8434S_DIR_LOW = 0x20,
+    /** @brief The direction input is high. */
+    DRV8434S_DIR_HIGH = 0xa0,
+};
 
 /**
  * @brief Determines the indexer microstep behavior as it advances.
@@ -140,32 +183,27 @@ enum drv8434s_microstep_mode {
     DRV8434S_MICROSTEP_256 = 10,
 };
 
-/** @brief Step request flag: Advance the indexer by one step. */
-#define DRV8434S_STEP_REQUEST_STEP (0x40)
-/** @brief Step request flag: Stepping direction. */
-#define DRV8434S_STEP_REQUEST_DIR (0x80)
-
 /**
  * @brief Encode a step request.
  *
- * @param step Advances the indexer one step, if true.
- * @param dir Stepping direction.
+ * @param step_input Step input behavior.
+ * @param dir_input Direction input behavior.
  * @param microstep_mode Microstep mode.
  * @return The encoded request.
  */
-static inline uint8_t drv8434s_make_step_request(bool step, bool dir,
-        enum drv8434s_microstep_mode microstep_mode) {
-    return (step ? DRV8434S_STEP_REQUEST_STEP : 0) | (dir ? DRV8434S_STEP_REQUEST_DIR : 0) | microstep_mode | 0x30;
+static inline uint8_t drv8434s_make_step_request(enum drv8434s_step_input step_input,
+        enum drv8434s_dir_input dir_input, enum drv8434s_microstep_mode microstep_mode) {
+    return (uint8_t)step_input | (uint8_t)dir_input | (uint8_t)microstep_mode;
 }
 
 /**
- * @brief Callback for asynchronous step requests
+ * @brief Callback for asynchronous step requests.
  *
  * @param dev DRV8434S device node.
  * @param result Result code of the request. 0 is success, -errno for failure.
  * @param user_data User data for the callback.
  */
-typedef void (*drv8434s_callback_t)(const struct device *dev, int result, void *data);
+typedef void (*drv8434s_step_callback_t)(const struct device *dev, int result, void *user_data);
 
 #ifdef CONFIG_SPI_ASYNC
 /**
@@ -189,7 +227,7 @@ typedef void (*drv8434s_callback_t)(const struct device *dev, int result, void *
  * @retval -errno Negative errno code on failure.
  */
 int drv8434s_step_async(const struct device *dev, const struct drv8434s_options *options,
-        const uint8_t* step_requests, drv8434s_callback_t callback, void* user_data);
+        const uint8_t* step_requests, drv8434s_step_callback_t callback, void* user_data);
 #endif /* CONFIG_SPI_ASYNC */
 
 /**
@@ -209,28 +247,51 @@ int drv8434s_step(const struct device *dev, const struct drv8434s_options *optio
 /**
  * @brief Set or clear the STL_LRN bit to learn the stall threshold.
  *
- * @param dev DRV8434S device node.
- * @param options Options for the request.
- * @param stall_learn Enable stall learning if true.
- * @retval 0 If successful.
- * @retval -EINVAL If the chain is stopped.
- * @retval -EBUSY If an asynchronous operation is in progress.
- * @retval -errno Negative errno code on failure.
- */
-int drv8434s_set_stall_learn_mode(const struct device *dev, const struct drv8434s_options *options,
-        bool stall_learn);
-
-/**
- * @brief Get the result of the stall learning process and the learned stall thresholds if any.
+ * Run the motor at steady state before calling this function.
+ * Lt the motor run for at least 16 electrical cycles then intentionally stall the motor.
+ * Call drv8434s_get_stall_learn_status to obtain the result of learning.
  *
  * @param dev DRV8434S device node.
  * @param options Options for the request.
- * @param learned_set Populated with BIT64(index) for each device whose stall threshold was learned.
- * @param stall_th_buf Buffer for num_devices stall thresholds. Populated with the value of each device's STALL_TH register.
+ * @param stall_learn_active_set Populated with BIT64(index) for each device to set STL_LRN = 1.
  * @retval 0 If successful.
  * @retval -EINVAL If the chain is stopped.
  * @retval -EBUSY If an asynchronous operation is in progress.
  * @retval -errno Negative errno code on failure.
  */
-int drv8434s_get_stall_learn_result(const struct device *dev, const struct drv8434s_options *options,
-        uint64_t *learned_set, uint16_t *stall_th_buf);
+int drv8434s_set_stall_learn_active(const struct device *dev, const struct drv8434s_options *options,
+        uint64_t stall_learn_active_set);
+
+/**
+ * @brief Get the status of the stall learning process and the learned stall thresholds.
+ *
+ * While stall learning is in progress, STL_LRN = 1.
+ * When stall learning succeeds, each device sets STL_LRN = 0 and STL_LRN_OK = 1.
+ * When stall learning fails, each device sets STL_LRN = 0 and STL_LRN_OK = 0.
+ *
+ * @param dev DRV8434S device node.
+ * @param options Options for the request.
+ * @param stall_learn_active_set Populated with BIT64(index) for each device that reports STL_LRN = 1.
+ * @param stall_learn_ok_set Populated with BIT64(index) for each device that reports STL_LRN_OK = 1.
+ * @param stall_th_buf Buffer for num_devices values. Populated with the value of each device's STALL_TH register.
+ * @retval 0 If successful.
+ * @retval -EINVAL If the chain is stopped.
+ * @retval -EBUSY If an asynchronous operation is in progress.
+ * @retval -errno Negative errno code on failure.
+ */
+int drv8434s_get_stall_learn_status(const struct device *dev, const struct drv8434s_options *options,
+        uint64_t *stall_learn_active_set, uint64_t *stall_learn_ok_set, uint16_t *stall_th_buf);
+
+/**
+ * @brief Get contents of the TRQ_COUNT register for each motor.
+ *
+ * @param dev DRV8434S device node.
+ * @param options Options for the request.
+ * @param trq_count_buf Buffer for num_devices values. Populated with the value of each device's TRQ_COUNT register.
+ * @retval 0 If successful.
+ * @retval -EINVAL If the chain is stopped.
+ * @retval -EBUSY If an asynchronous operation is in progress.
+ * @retval -errno Negative errno code on failure.
+ */
+int drv8434s_get_trq_count(const struct device *dev, const struct drv8434s_options *options,
+        uint16_t* trq_count_buf);

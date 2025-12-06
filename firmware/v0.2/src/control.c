@@ -23,6 +23,8 @@ void control_gpio_callback_handler(const struct device *port, struct gpio_callba
         action = CONTROL_ACTION_PRESS_UP;
     } else if (control_down && !control_up) {
         action = CONTROL_ACTION_PRESS_DOWN;
+    } else if (control_up && control_down) {
+        action = CONTROL_ACTION_PRESS_MODE;
     } else {
         action = CONTROL_ACTION_RELEASE;
     }
@@ -39,6 +41,9 @@ void control_work_handler(struct k_work* work) {
             break;
         case CONTROL_ACTION_PRESS_DOWN:
             reschedule_for_hold = atomic_cas(&control_action_pending, action, CONTROL_ACTION_HOLD_DOWN);
+            break;
+        case CONTROL_ACTION_PRESS_MODE:
+            reschedule_for_hold = atomic_cas(&control_action_pending, action, CONTROL_ACTION_HOLD_MODE);
             break;
         default:
             reschedule_for_hold = false;
