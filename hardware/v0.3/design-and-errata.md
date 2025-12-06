@@ -63,3 +63,9 @@ TODO:
 - Supply the DIR signal from a GPIO.
 - Provide PWM capable outputs for the lift motors.
 - Gate the motor driver SLEEP through an e-stop switch connection.
+- Ensure these signals share a port for efficient interrupt handling
+  - LIFT_LIMIT_A + LIFT_LIMIT_B (PB)
+  - LIFT1_HALL1 + LIFT1_HALL2 (PB)
+  - LIFT2_HALL1 + LIFT2_HALL2 (PA) --> ideally combine with other hall port
+  - CTRL_LOWER + CTRL_RAISE (PB)
+  
