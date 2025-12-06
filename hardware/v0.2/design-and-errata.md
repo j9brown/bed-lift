@@ -36,7 +36,7 @@ The schematics include the BOM and metadata for the JLCPCB fabrication toolkit p
 
 Be advised that this version of the circuit board contains errors that must be corrected for correct operation.
 
-The lift motor connector pins 2 and 3 are swapped which reverses the polarity of the power supply to the hall sensors.
+The lift actuator connector pins 2 and 3 are swapped which reverses the polarity of the power supply to the hall sensors.
 
   - Cut a section out of the lead for pin 3 where it connects to GND.
   - Cut the VHALL trace for pin 3. Expose part of the trace under the solder mask.
@@ -54,6 +54,15 @@ The DRV8434S stall detection logic requires STEP pulses to arrive at regular int
   - Note that the pad is tied to ground underneath the chip so cutting the trace is not practical (unless the whole chip is removed).
 
 Having both groups of motor drivers share the same DRV_SLEEP signal makes it harder to control them independently.  Conversely, it would be nice to gate the sleep signals through a physical emergency stop switch connection.
+
+The lift actuators are synchronized by observing pulses from the hall sensors.  The original plan was to bit-bang the motor drivers to stall whichever motor is falling behind as was done in the v0.1 prototype but we can get smoother operation of the motor and also support a slow-start acceleration ramp using PWM.  Unfortunately, one of the motor driver inputs must be relocated to use the timer function.
+
+  - Cut the traces for LIFT_1_IN2 and LIFT_FAULT where they exit their vias near R16.
+  - Solder a wire from MCU pin 27 to LIFT1 DRV8874 pin 2.  This will be the new LIFT1_IN2.
+  - Solder a wire from MCU pin 26 to LIFT1 DRV8874 pin 4.  This will be the new LIFT_FAULT.
+  - Effectively MCU pin 26 and 27 are being swapped so that LIFT_IN2 can be driven by TIM3_CH2.  The other inputs can already be bound to the other TIM3 channels.
+
+Apply epoxy to the bodges to keep them secure.
 
 Attach adhesive heatsinks to the bottom of the board.  It worked well to cut up two generic 70 mm x 25 mm x 10 mm heatsinks to fit the spaces below both groups of motor drivers.
 
