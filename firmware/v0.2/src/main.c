@@ -13,7 +13,7 @@
 static const struct device *watchdog_dev = DEVICE_DT_GET(DT_NODELABEL(iwdg));
 
 // Timeout for the indicator to go dark after completing an activity.
-#define ACTIVITY_TIMEOUT_MS (2500)
+#define ACTIVITY_TIMEOUT_MS (1500)
 
 static atomic_t control_action_current;
 
@@ -27,20 +27,80 @@ enum menu {
 };
 enum menu menu;
 
+INDICATOR_PATTERN_LOOP(indicator_pattern_error,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_RED, 2, 2));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_aborted,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 2, 2));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0000_l11,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_GREEN, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0000_l10,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_GREEN, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_GREEN, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0000_l01,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_GREEN, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_GREEN, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_GREEN, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s1111_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_CYAN, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s1100_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_CYAN, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_CYAN, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0011_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_CYAN, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_CYAN, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_CYAN, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s1000_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0100_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0010_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 6));
+
+INDICATOR_PATTERN_LOOP(indicator_pattern_jog_s0001_l00,
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_AMBER, 3, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 2),
+    INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 6));
+
 struct jog_spec {
     unsigned span;
     unsigned lift;
+    const indicator_pattern_t *indicator_pattern;
 };
 static const struct jog_spec jog_specs[] = {
-    { .span = 0, .lift = BIT(0) | BIT(1), },
-    { .span = BIT(0) | BIT(1), .lift = 0, },
-    { .span = BIT(2) | BIT(3), .lift = 0, },
-    { .span = 0, .lift = BIT(0), },
-    { .span = 0, .lift = BIT(1), },
-    { .span = BIT(0), .lift = 0, },
-    { .span = BIT(1), .lift = 0, },
-    { .span = BIT(2), .lift = 0, },
-    { .span = BIT(3), .lift = 0, },
+    { .span = 0, .lift = BIT(0) | BIT(1), .indicator_pattern = indicator_pattern_jog_s0000_l11 },
+    { .span = 0, .lift = BIT(0), .indicator_pattern = indicator_pattern_jog_s0000_l10 },
+    { .span = 0, .lift = BIT(1), .indicator_pattern = indicator_pattern_jog_s0000_l01},
+    { .span = BIT(0) | BIT(1) | BIT(2) | BIT(3), .lift = 0, .indicator_pattern = indicator_pattern_jog_s1111_l00 },
+    { .span = BIT(0) | BIT(1), .lift = 0, .indicator_pattern = indicator_pattern_jog_s1100_l00 },
+    { .span = BIT(2) | BIT(3), .lift = 0, .indicator_pattern = indicator_pattern_jog_s0011_l00},
+    { .span = BIT(0), .lift = 0, .indicator_pattern = indicator_pattern_jog_s1000_l00 },
+    { .span = BIT(1), .lift = 0, .indicator_pattern = indicator_pattern_jog_s0100_l00 },
+    { .span = BIT(2), .lift = 0, .indicator_pattern = indicator_pattern_jog_s0010_l00 },
+    { .span = BIT(3), .lift = 0, .indicator_pattern = indicator_pattern_jog_s0001_l00 },
 };
 static unsigned jog_index;
 
@@ -125,44 +185,40 @@ static int do_long_press_mode(void) {
     }
 }
 
-static void show_error(void) {
-    status_indicator_on(INDICATOR_HUE_RED);
-}
-
 static void show_status(void) {
     switch (menu) {
         case MENU_JOG:
-            status_indicator_on(INDICATOR_HUE_MAGENTA);
+            indicator_pattern(jog_specs[jog_index].indicator_pattern);
             break;
         case MENU_MAIN:
         default:
             switch (bed_get_state()) {
+                case BED_STATE_ERROR:
+                    indicator_pattern(indicator_pattern_error);
+                    break;
                 case BED_STATE_ABORTED:
-                    status_indicator_on(INDICATOR_HUE_YELLOW);
+                    indicator_pattern(indicator_pattern_aborted);
                     break;
                 case BED_STATE_MOVING:
                     switch (bed_get_target_pose()) {
                         case BED_POSE_LOUNGE:
-                            status_indicator_on(INDICATOR_HUE_MAGENTA + bed_get_progress() * 20);
+                            indicator_on(INDICATOR_HUE_CYAN - bed_get_progress() * (INDICATOR_HUE_CYAN - INDICATOR_HUE_GREEN) / 100);
                             break;
                         case BED_POSE_SLEEP:
-                            status_indicator_on(INDICATOR_HUE_BLUE - bed_get_progress() * 20);
+                            indicator_on(INDICATOR_HUE_BLUE + bed_get_progress() * (INDICATOR_HUE_MAGENTA - INDICATOR_HUE_BLUE) / 100);
                             break;
                         default:
                             __ASSERT(false, "");
                             break;
                     }
                     break;
-                case BED_STATE_ERROR:
-                    status_indicator_on(INDICATOR_HUE_RED);
-                    break;
                 case BED_STATE_DONE:
                     switch (bed_get_current_pose()) {
                         case BED_POSE_LOUNGE:
-                            status_indicator_on(INDICATOR_HUE_GREEN);
+                            indicator_on(INDICATOR_HUE_GREEN);
                             break;
                         case BED_POSE_SLEEP:
-                            status_indicator_on(INDICATOR_HUE_CYAN);
+                            indicator_on(INDICATOR_HUE_MAGENTA);
                             break;
                         default:
                             __ASSERT(false, "");
@@ -175,18 +231,17 @@ static void show_status(void) {
 }
 
 static void loop(void) {
-    static bool action_aborted;
+    static bool action_error;
     static enum control_action action_pending;
     static int64_t last_action_time;
 
     const enum control_action action_current = atomic_get(&control_action_current);
     if (action_current == CONTROL_ACTION_RELEASE) {
-        action_aborted = false;
-    } else {
-        last_action_time = k_uptime_get();
+        action_error = false;
     }
     int err = 0; // 0 means done (ready to rest), 1 means in progress, < 0 means error
-    if (!action_aborted) {
+    bool did_action = false;
+    if (!action_error) {
         switch (action_current) {
             case CONTROL_ACTION_PRESS_UP:
             case CONTROL_ACTION_PRESS_DOWN:
@@ -196,15 +251,18 @@ static void loop(void) {
             case CONTROL_ACTION_HOLD_UP:
                 err = do_hold_up();
                 action_pending = CONTROL_ACTION_RELEASE;
+                did_action = true;
                 break;
             case CONTROL_ACTION_HOLD_DOWN:
                 err = do_hold_down();
                 action_pending = CONTROL_ACTION_RELEASE;
+                did_action = true;
                 break;
             case CONTROL_ACTION_HOLD_MODE:
                 if (action_pending == CONTROL_ACTION_PRESS_MODE) {
                     err = do_long_press_mode();
                     action_pending = CONTROL_ACTION_HOLD_MODE;
+                    did_action = true;
                 }
                 break;
             case CONTROL_ACTION_RELEASE:
@@ -212,12 +270,15 @@ static void loop(void) {
                 switch (action_pending) {
                     case CONTROL_ACTION_PRESS_UP:
                         err = do_click_up();
+                        did_action = true;
                         break;
                     case CONTROL_ACTION_PRESS_DOWN:
                         err = do_click_down();
+                        did_action = true;
                         break;
                     case CONTROL_ACTION_PRESS_MODE:
                         err = do_click_mode();
+                        did_action = true;
                         break;
                     default:
                         break;
@@ -226,26 +287,29 @@ static void loop(void) {
                 break;
         }
     }
+    if (did_action) {
+        last_action_time = k_uptime_get();
+    }
     if (err == 0) {
         err = do_rest();
     }
     if (err < 0) {
-        action_aborted = true;
+        action_error = true;
     }
-    if (action_aborted) {
-        show_error();
-    } else if (action_current != CONTROL_ACTION_RELEASE || menu != MENU_MAIN
-            || k_uptime_get() - last_action_time < ACTIVITY_TIMEOUT_MS) {
+    if (action_error) {
+        indicator_pattern(indicator_pattern_error);
+    } else if (k_uptime_get() - last_action_time < ACTIVITY_TIMEOUT_MS
+            || menu != MENU_MAIN) {
         show_status();
     } else {
-        status_indicator_off();
+        indicator_pattern(NULL);
     }
 }
 
 int main(void) {
     int err;
     if ((err = setup())) {
-        status_indicator_on(INDICATOR_HUE_RED);
+        indicator_on(INDICATOR_HUE_RED);
         return err;
     }
 

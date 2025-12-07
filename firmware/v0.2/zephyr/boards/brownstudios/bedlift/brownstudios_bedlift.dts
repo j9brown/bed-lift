@@ -145,7 +145,7 @@
 
 		/* Current limit setting
 		 *   4: 1.7 A
-		 *   5: 1.4 A, circuit board very hot under the chip
+		 *   5: 1.4 A, circuit board very hot under the drv8434s chip
 		 *   6: 1.2 A
 		 *   7: 1.0 A
 		 *   8: 0.8 A

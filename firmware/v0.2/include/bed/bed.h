@@ -26,10 +26,15 @@ enum bed_state {
 
 int bed_init(void);
 
-unsigned bed_get_progress(void);
 enum bed_state bed_get_state(void);
 enum bed_pose bed_get_current_pose(void);
 enum bed_pose bed_get_target_pose(void);
+
+/**
+ * @brief Gets the approximate progress of the bed through its motion to the next pose
+ * as a percentage between 0 and 100.  Only valid while moving or done.
+ */
+unsigned bed_get_progress(void);
 
 /*
  * The poll functions perform an action incrementally while keeping the actuators synchronized.

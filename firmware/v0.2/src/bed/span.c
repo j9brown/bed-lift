@@ -103,7 +103,7 @@ static const struct pwm_dt_spec span_step_spec = PWM_DT_SPEC_GET_BY_IDX(DT_NODEL
 // The maximum and minimum step rate in pulses per second.
 // The maximum is limited by interrupt processing overhead (the DRV8434S allows up to 500 kHz step).
 // The minimum is limited by the 16 bit timer resolution and prescale factor.
-#define SPAN_STEP_RATE_MAX (10000)
+#define SPAN_STEP_RATE_MAX (20000)
 #define SPAN_STEP_RATE_MIN (100)
 
 // The minimum step duration in the DRV8434S datasheet is 1 us.

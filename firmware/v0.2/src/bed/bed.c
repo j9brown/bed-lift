@@ -76,12 +76,14 @@ int bed_poll_pose(enum bed_pose pose) {
                             // Achieved sleep pose
                             lift_err = lift_poll_standby();
                             span_err = span_poll_sleep(); // span must sleep after lift action
+                            bed_progress = 100;
                             maybe_done = true;
                             break;
                         default:
                             // Raise to safe zone to extend span
                             span_err = span_poll_standby(); // span must wake before lift action
                             lift_err = lift_poll_raise();
+                            bed_progress = 0;
                             break;
                     }
                     break;
@@ -91,11 +93,13 @@ int bed_poll_pose(enum bed_pose pose) {
                             // Proceed to lower the lift
                             span_err = span_poll_standby(); // span must wake before lift action
                             lift_err = lift_poll_lower();
+                            bed_progress = 80;
                             break;
                         default:
                             // Raise to safe zone to extend span
                             span_err = span_poll_standby(); // span must wake before lift action
                             lift_err = lift_poll_raise();
+                            bed_progress = 20;
                             break;
                     }
                     break;
@@ -105,19 +109,27 @@ int bed_poll_pose(enum bed_pose pose) {
                             // Proceed to lower the lift
                             span_err = span_poll_standby(); // span must wake before lift action
                             lift_err = lift_poll_lower();
+                            bed_progress = 60;
                             break;
                         default:
                             // Extend the span before lowering
                             span_err = span_poll_extend(); // span must wake before lift action
                             lift_err = lift_poll_standby();
+                            bed_progress = 40;
                             break;
                     }
                     break;
                 case LIFT_POSITION_ABOVE_SAFE_ZONE:
+                    // Proceed to lower the lift
+                    span_err = span_poll_standby(); // span must wake before lift action
+                    lift_err = lift_poll_lower();
+                    bed_progress = 20;
+                    break;
                 case LIFT_POSITION_UPPER_LIMIT:
                     // Proceed to lower the lift
                     span_err = span_poll_standby(); // span must wake before lift action
                     lift_err = lift_poll_lower();
+                    bed_progress = 0;
                     break;
                 default:
                     // Unknown position
@@ -129,10 +141,16 @@ int bed_poll_pose(enum bed_pose pose) {
         case BED_POSE_LOUNGE:
             switch (lift_get_position()) {
                 case LIFT_POSITION_LOWER_LIMIT:
+                    // Proceed to raise the lift
+                    span_err = span_poll_standby(); // span must wake before lift action
+                    lift_err = lift_poll_raise();
+                    bed_progress = 0;
+                    break;
                 case LIFT_POSITION_BELOW_SAFE_ZONE:
                     // Proceed to raise the lift
                     span_err = span_poll_standby(); // span must wake before lift action
                     lift_err = lift_poll_raise();
+                    bed_progress = 20;
                     break;
                 case LIFT_POSITION_IN_SAFE_ZONE:
                 case LIFT_POSITION_ABOVE_SAFE_ZONE:
@@ -141,11 +159,13 @@ int bed_poll_pose(enum bed_pose pose) {
                             // Proceed to raise the lift
                             span_err = span_poll_standby(); // span must wake before lift action
                             lift_err = lift_poll_raise();
+                            bed_progress = 60 + lift_get_position() ? 20 : 0;
                             break;
                         default:
                             // Retract the span before raising
                             span_err = span_poll_retract(); // span must wake before lift action
                             lift_err = lift_poll_standby();
+                            bed_progress = 40 + lift_get_position() ? 20 : 0;
                             break;
                     }
                     break;
@@ -155,12 +175,14 @@ int bed_poll_pose(enum bed_pose pose) {
                             // Achieved lounge pose
                             lift_err = lift_poll_standby();
                             span_err = span_poll_sleep(); // span must sleep after lift action
+                            bed_progress = 100;
                             maybe_done = true;
                             break;
                         default:
                             // Retract the span before completion
                             span_err = span_poll_retract(); // span must wake before lift action
                             lift_err = lift_poll_standby();
+                            bed_progress = 80;
                             break;
                     }
                     break;
@@ -183,12 +205,12 @@ int bed_poll_pose(enum bed_pose pose) {
         return -ECANCELED;
     }
 
-    bed_progress += 1;
     if (lift_err != 0 || span_err != 0 || !maybe_done) {
         return 1; // movement still in progress
     }
 
     bed_current_pose = pose;
     bed_state = BED_STATE_DONE;
+    bed_progress = 100;
     return 0;
 }
