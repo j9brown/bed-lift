@@ -80,6 +80,7 @@ struct drv8434s_options {
  */
 int drv8434s_has_fault(const struct device *dev);
 
+#ifdef CONFIG_DRV8434S_FAULT_CALLBACK
 /**
  * @brief Callback invoked when the fault pin becomes active.
  *
@@ -98,6 +99,7 @@ typedef void (*drv8434s_fault_callback_t)(void *user_data);
  * @retval -errno Negative errno code on failure.
  */
 int drv8434s_set_fault_callback(const struct device *dev, drv8434s_fault_callback_t callback, void *user_data);
+#endif /* CONFIG_DRV8434S_FAULT_CALLBACK*/
 
 /**
  * @brief Get the fault status of the chain of motor driver devices.

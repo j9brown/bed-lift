@@ -19,4 +19,10 @@ config DRV8434S_INIT_PRIORITY
 	help
 	  TI DRV8434S device driver initialization priority. Must be greater than SPI_INIT_PRIORITY.
 
+config DRV8434S_FAULT_CALLBACK
+	bool "Enable fault callback API"
+	default n
+	help
+	  Fault pin must support interrupts.
+
 endif # DRV8434S

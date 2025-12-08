@@ -25,9 +25,11 @@ struct drv8434s_config {
 struct drv8434s_data {
 	uint8_t *tx_buf;
 	uint8_t *rx_buf;
+#ifdef CONFIG_DRV8434S_FAULT_CALLBACK
 	struct gpio_callback fault_gpio_callback;
 	drv8434s_fault_callback_t fault_callback;
 	void *fault_user_data;
+#endif
 	bool started;
 #ifdef CONFIG_SPI_ASYNC
 	bool async_busy;
@@ -198,6 +200,8 @@ static int drv8434s_transceive(const struct device *dev, uint8_t *status_buf, ui
 	return drv8434s_transceive_complete(config, data, status_buf, report_buf);
 }
 
+#ifdef CONFIG_DRV8434S_FAULT_CALLBACK
+
 static void drv8434s_fault_callback(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
 	struct drv8434s_data *data = CONTAINER_OF(cb, struct drv8434s_data, fault_gpio_callback);
 	data->fault_callback(data->fault_user_data);
@@ -230,6 +234,8 @@ int drv8434s_set_fault_callback(const struct device *dev, drv8434s_fault_callbac
 	return 0;
 }
 
+#endif /* CONFIG_DRV8434S_FAULT_CALLBACK */
+
 static int drv8434s_init(const struct device *dev) {
 	const struct drv8434s_config *config = dev->config;
 	struct drv8434s_data *data = dev->data;
@@ -244,7 +250,9 @@ static int drv8434s_init(const struct device *dev) {
 		if ((err = gpio_pin_configure_dt(&config->fault_gpio, GPIO_INPUT))) {
 			return err;
 		}
+#ifdef CONFIG_DRV8434S_FAULT_CALLBACK
 	    gpio_init_callback(&data->fault_gpio_callback, drv8434s_fault_callback, BIT(config->fault_gpio.pin));
+#endif
 	}
 	if (config->sleep_gpio.port && (err = gpio_pin_configure_dt(&config->sleep_gpio, GPIO_OUTPUT_ACTIVE))) {
 		return err;

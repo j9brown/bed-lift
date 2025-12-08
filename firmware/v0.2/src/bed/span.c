@@ -35,10 +35,10 @@
 #include <stdlib.h>
 #include <stm32c0xx_hal.h>
 #include <stm32c0xx_ll_tim.h>
-#include <zephyr/kernel.h>
 #include <zephyr/drivers/counter.h>
 #include <zephyr/drivers/drv8434s.h>
 #include <zephyr/drivers/pwm.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
 #include "bed/span.h"
@@ -98,7 +98,7 @@ static const struct device *span_stepper_dev = DEVICE_DT_GET(DT_NODELABEL(span_s
 #define SPAN_STEP_TIMER_NODE DT_NODELABEL(_CONCAT(timers, SPAN_STEP_TIMER_NUMBER))
 #define SPAN_STEP_TIMER_CHANNEL LL_TIM_CHANNEL_CH1
 static TIM_TypeDef * const span_step_timer = _CONCAT(TIM, SPAN_STEP_TIMER_NUMBER);
-static const struct pwm_dt_spec span_step_spec = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(span_step), 0);
+static const struct pwm_dt_spec span_step_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(span_step), 0);
 
 // The maximum and minimum step rate in pulses per second.
 // The maximum is limited by interrupt processing overhead (the DRV8434S allows up to 500 kHz step).
@@ -145,7 +145,7 @@ static void span_step_timer_isr(void *user_data) {
 static int span_step_timer_init_l(void) {
     // Precompute the pulse width.
     int err;
-    if ((err = pwm_get_cycles_per_sec(span_step_spec.dev, span_step_spec.channel,
+    if ((err = pwm_get_cycles_per_sec(span_step_pwm.dev, span_step_pwm.channel,
             &span_step_data.clock_rate))) {
         return err;
     }
@@ -165,12 +165,12 @@ static int span_step_timer_init_l(void) {
 
 static inline int span_step_timer_start_l() {
     __ASSERT(span_step_data.step_rate >= SPAN_MIN_STEP_RATE && span_step_data.step_rate <= SPAN_MAX_STEP_RATE, "");
-    return pwm_set_cycles(span_step_spec.dev, span_step_spec.channel,
-            span_step_data.clock_rate / span_step_data.step_rate, span_step_data.pulse_width, span_step_spec.flags);
+    return pwm_set_cycles(span_step_pwm.dev, span_step_pwm.channel,
+            span_step_data.clock_rate / span_step_data.step_rate, span_step_data.pulse_width, span_step_pwm.flags);
 }
 
 static inline int span_step_timer_stop_l(void) {
-    return pwm_set_cycles(span_step_spec.dev, span_step_spec.channel, 0, 0, span_step_spec.flags);
+    return pwm_set_cycles(span_step_pwm.dev, span_step_pwm.channel, 0, 0, span_step_pwm.flags);
 }
 
 static void span_step_update_travel_l(void) {
@@ -260,13 +260,8 @@ static int span_step_halt_l() {
 
 static const struct device *span_loop_tick_dev = DEVICE_DT_GET(DT_NODELABEL(span_loop_tick));
 
-// This semaphore blocks the step loop until the next event occurs.
-K_SEM_DEFINE(span_loop_event_sem, 0, 1);
-
-// The event that is triggering the next iteration of the span loop.
-#define SPAN_LOOP_EVENT_TICK (1 << 0)
-#define SPAN_LOOP_EVENT_FAULT (1 << 1)
-static atomic_t span_loop_events;
+// This semaphore blocks the step loop until the next tick occurs.
+K_SEM_DEFINE(span_loop_tick_sem, 0, 1);
 
 // Step loop watchdog timeout to ensure the main loop remains in control of the movement.
 #define SPAN_LOOP_TIMEOUT_US (20000)
@@ -317,14 +312,8 @@ static unsigned span_control_accel;
 static bool span_stall_learn_pending;
 #endif
 
-static void span_loop_tick(const struct device *dev, void *user_data) {
-    atomic_or(&span_loop_events, SPAN_LOOP_EVENT_TICK);
-    k_sem_give(&span_loop_event_sem);
-}
-
-static void span_loop_fault(void *user_data) {
-    atomic_or(&span_loop_events, SPAN_LOOP_EVENT_FAULT);
-    k_sem_give(&span_loop_event_sem);
+static void span_loop_tick_handler(const struct device *dev, void *user_data) {
+    k_sem_give(&span_loop_tick_sem);
 }
 
 static void span_loop(void *, void *, void *) {
@@ -339,12 +328,11 @@ static void span_loop(void *, void *, void *) {
     int err;
 
     for (;;) {
-        // Wait for an event; this semaphore is not released by this loop.
-        k_sem_take(&span_loop_event_sem, K_FOREVER);
+        // Wait for a tick; this semaphore is not released by this loop.
+        k_sem_take(&span_loop_tick_sem, K_FOREVER);
 
         // Check step result from the last iteration.
         k_sem_take(&span_state_sem, K_FOREVER);
-        atomic_val_t last_events = atomic_set(&span_loop_events, 0);
         const int last_step_result = pending_step_result;
         pending_step_result = STEP_NOT_PENDING;
         if (span_loop_state <= SPAN_LOOP_HALT) {
@@ -389,10 +377,6 @@ static void span_loop(void *, void *, void *) {
             }
         }
 
-        // Update control inputs to the motor driver on each timer tick.
-        if ((last_events & SPAN_LOOP_EVENT_TICK) == 0) {
-            goto give_state_sem_and_continue;
-        }
         // Check for timeout.
         if (span_loop_ticks_remaining == 0) {
             span_loop_state = SPAN_LOOP_TIMEOUT;
@@ -605,13 +589,10 @@ int span_init(void) {
     if ((err = span_step_timer_init_l())) {
         return err;
     }
-    if ((err = drv8434s_set_fault_callback(span_stepper_dev, span_loop_fault, NULL))) {
-        return err;
-    }
 
     struct counter_top_cfg cfg = {
         .ticks = counter_get_frequency(span_loop_tick_dev) / SPAN_LOOP_TICK_FREQUENCY,
-        .callback = span_loop_tick,
+        .callback = span_loop_tick_handler,
         .user_data = NULL,
         .flags = 0,
     };
