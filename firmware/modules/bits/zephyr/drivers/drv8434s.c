@@ -349,11 +349,19 @@ int drv8434s_stop(const struct device *dev) {
 	uint8_t *tx_buf = data->tx_buf;
 	drv8434s_tx_buf_header2(tx_buf, false); // don't clear faults
 	drv8434s_tx_buf_reg_write_all(tx_buf, num_devices, DRV8434S_REG_CTRL2,
-		drv8434s_make_ctrl2(config, false));
-	int err1 = drv8434s_transceive(dev, NULL, NULL, NULL, NULL);
-	int err2 = config->sleep_gpio.port ? gpio_pin_set_dt(&config->sleep_gpio, true) : 0;
+			drv8434s_make_ctrl2(config, false)); // disable outputs
+	int err = drv8434s_transceive(dev, NULL, NULL, NULL, NULL);
+
+	if (config->sleep_gpio.port) {
+		// Setting the sleep pin should also disable outputs so we can ignore errors from
+		// the prior attempt.
+		err = gpio_pin_set_dt(&config->sleep_gpio, true);
+	}
+	if (err) {
+		return err;
+	}
 	data->started = false;
-	return err1 ? err1 : err2;
+	return 0;
 }
 
 int drv8434s_has_fault(const struct device *dev) {

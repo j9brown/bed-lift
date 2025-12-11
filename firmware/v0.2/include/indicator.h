@@ -30,22 +30,23 @@ void indicator_on(unsigned hue);
 /**
  * @brief Defines a pattern of colors for an indicator.
  *
- * The indicator turns on with the given hue for on_time then off for off_time.
+ * The indicator turns on with the given hue for on_time then off for off_time blinking up to cycle times.
  * The time intervals are specified in 0.1 second increments.
- * Terminate an array of pattern entries with an entry with on_time = 0.
- * If the last entry has off_time = 0 then the pattern repeats otherwise it stops.
+ * Terminate an array of pattern entries with an entry with cycles = 0.
+ * If the last entry has zero on_time then the pattern repeats after off_time interval, otherwise it stops.
  */
 struct indicator_pattern_entry {
-    uint16_t hue;
-    uint8_t on_time;
-    uint8_t off_time;
+    unsigned hue : 16;
+    unsigned on_time : 5;
+    unsigned off_time : 5;
+    unsigned cycles : 6;
 };
 typedef struct indicator_pattern_entry indicator_pattern_t;
-#define INDICATOR_PATTERN_ENTRY(hue_, on_time_, off_time_) { .hue = hue_, .on_time = on_time_, .off_time = off_time_ }
-#define INDICATOR_PATTERN_ENTRY_REPEAT INDICATOR_PATTERN_ENTRY(0, 0, 0)
-#define INDICATOR_PATTERN_ENTRY_END INDICATOR_PATTERN_ENTRY(0, 0, 0xff)
+#define INDICATOR_PATTERN_ENTRY(hue_, on_time_, off_time_, cycles_) { .hue = hue_, .on_time = on_time_, .off_time = off_time_, .cycles = cycles_ }
+#define INDICATOR_PATTERN_ENTRY_REPEAT(delay_) INDICATOR_PATTERN_ENTRY(0, 0, delay_, 0)
+#define INDICATOR_PATTERN_ENTRY_END INDICATOR_PATTERN_ENTRY(0, 1, 0, 0)
 #define INDICATOR_PATTERN_ONCE(name, ...) const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_END }
-#define INDICATOR_PATTERN_LOOP(name, ...) const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_REPEAT }
+#define INDICATOR_PATTERN_LOOP(name, delay_, ...) const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_REPEAT(delay_) }
 
 /**
  * @brief Perform an indicator pattern.

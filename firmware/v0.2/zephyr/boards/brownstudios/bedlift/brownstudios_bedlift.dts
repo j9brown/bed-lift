@@ -18,13 +18,20 @@
 	zephyr,user {
 		control-up-gpios = <&gpiob 8 GPIO_ACTIVE_LOW>;
 		control-down-gpios = <&gpiob 9 GPIO_ACTIVE_LOW>;
+		lift-fault-gpios = <&gpioa 15 GPIO_ACTIVE_LOW>;
+		lift-limit-a-gpios = <&gpiob 5 GPIO_ACTIVE_LOW>;
+		lift-limit-b-gpios = <&gpiob 4 GPIO_ACTIVE_LOW>;
+		lift1-hall1-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+		lift1-hall2-gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+		lift2-hall1-gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
+		lift2-hall2-gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
 	};
 
 	pwm_set {
 		compatible = "pwm-set";
 
-		span_step: span_step {
-			pwms = <&pwm17 1 PWM_USEC(100) PWM_POLARITY_NORMAL>;
+		span_step: span_step { /* frequency varies at runtime */
+			pwms = <&pwm17 1 0 PWM_POLARITY_NORMAL>;
 		};
 		lift1_in1: lift1_in1 {
 			pwms = <&pwm3 3 PWM_USEC(40) PWM_POLARITY_NORMAL>;
@@ -60,6 +67,15 @@
 	apb1-prescaler = <4>;
 };
 
+&exti {
+	/* An interrupt decodes quadrature pulses from the lift hall sensors and must capture both edges
+	 * of jitter pulses on the order of microseconds to track position.
+	 * TODO: Change the hardware so the hall sensor inputs are on EXTI0-1 and EXTI2-3 with higher priority
+	 *       then lower the priority of EXTI4-15. Unfortunately the pins are scattered across all EXTI lines.
+	 * Requires elevated priority. */
+	interrupts = <5 2>, <6 2>, <7 2>;
+};
+
 &timers1 {
 	/* Divide the 24 MHz clock by 0+1 for timing 1000 Hz LED PWM. */
 	st,prescaler = <0>;
@@ -74,7 +90,7 @@
 };
 
 &timers3 {
-	/* Divide the 24 MHz clock by 0+1 for timing 25000 Hz motor PWM. */
+	/* Divide the 24 MHz clock by 0+1 for timing 25000 Hz lift actuator PWM. */
 	st,prescaler = <0>;
 	status = "okay";
 
@@ -97,10 +113,27 @@
 	};
 };
 
+&timers16 {
+	/* Divide the 24 MHz clock by 7+1 for timing 100 Hz lift loop ticks.
+	 * We could perhaps share this responsibility with the other timer but we have the hardware
+	 * resources available and it's simpler to keep the loops decoupled. */
+	st,prescaler = <7>;
+	status = "okay";
+
+    lift_loop_tick: counter {
+		compatible = "st,stm32-counter";
+		status = "okay";
+	};
+};
+
 &timers17 {
-	/* Divide the 24 MHz clock by 3+1 for timing 100 to 25000 Hz span step pulses. */
+	/* Divide the 24 MHz clock by 3+1 for timing 100 to 25000 Hz span actuator step pulses. */
 	st,prescaler = <3>;
 	status = "okay";
+
+	/* An interrupt counts every step to track actuator position at high speed.
+	 * Requires elevated priority. */
+	interrupts = <22 2>;
 
 	pwm17: pwm {
 		pinctrl-0 = <&tim17_ch1_pc14>;

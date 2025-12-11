@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "errors.h"
+
 enum bed_pose {
     BED_POSE_UNKNOWN = 0,
     BED_POSE_SLEEP = 1,
@@ -41,6 +43,9 @@ unsigned bed_get_progress(void);
  * 
  * @retval 0 If the action is done.
  * @retval 1 If the action is still in progress.
+ * @retval BED_* A specific error from the bed component.
+ * @retval LIFT_* A specific error from the lift component.
+ * @retval SPAN_* A specific error from the span component.
  * @return -errno If an error occurred.
  */
 

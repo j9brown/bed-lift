@@ -18,10 +18,9 @@ enum control_action {
 };
 
 /**
- * @brief The callback to invoke when the control action changes.
- * Runs on the system work queue.
+ * @brief Gets the current action.
  */
-extern void control_action_callback(enum control_action action);
+enum control_action control_get_action_current(void);
 
 /**
  * @brief Initialize the control driver.

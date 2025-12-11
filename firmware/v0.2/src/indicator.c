@@ -11,6 +11,7 @@ K_SEM_DEFINE(indicator_sem, 1, 1);
 
 static const indicator_pattern_t *indicator_pattern_current;
 static unsigned indicator_pattern_index;
+static unsigned indicator_pattern_cycle;
 static bool indicator_pattern_on;
 
 static void indicator_pattern_handler(struct k_work* work);
@@ -85,18 +86,27 @@ void indicator_pattern_advance_l() {
     for (;;) {
         const struct indicator_pattern_entry *entry = &indicator_pattern_current[indicator_pattern_index];
         if (!indicator_pattern_on) {
-            if (entry->on_time) {
+            if (entry->cycles) {
                 indicator_pattern_on = true;
                 indicator_pwm_set_on_l(entry->hue);
                 k_work_reschedule(&indicator_pattern_work, K_MSEC(entry->on_time * 100));
                 break; // wait for next cycle
             }
-            if (entry->off_time) {
+            if (entry->on_time) {
                 break; // end pattern
             }
             indicator_pattern_index = 0; // repeat pattern
+            indicator_pattern_cycle = 0;
+            if (entry->off_time) {
+                k_work_reschedule(&indicator_pattern_work, K_MSEC(entry->off_time * 100));
+                break; // wait for delay between repetitions
+            }
         } else {
-            indicator_pattern_index += 1;
+            indicator_pattern_cycle += 1;
+            if (indicator_pattern_cycle >= entry->cycles) {
+                indicator_pattern_index += 1;
+                indicator_pattern_cycle = 0;
+            }
             indicator_pattern_on = false;
             if (entry->off_time) {
                 indicator_pwm_set_off_l();
@@ -123,6 +133,7 @@ void indicator_pattern(const indicator_pattern_t *pattern) {
         indicator_pattern_current = pattern;
         if (pattern) {
             indicator_pattern_index = 0;
+            indicator_pattern_cycle = 0;
             indicator_pattern_on = false;
             indicator_pattern_advance_l();
         }

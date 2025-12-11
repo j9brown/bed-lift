@@ -1,21 +1,27 @@
 #include <errno.h>
-#include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
 #include "control.h"
 
 #define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+static const struct gpio_dt_spec control_up_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, control_up_gpios);
+static const struct gpio_dt_spec control_down_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, control_down_gpios);
 
-static struct gpio_dt_spec control_up_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, control_up_gpios);
-static struct gpio_dt_spec control_down_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, control_down_gpios);
+#define CONTROL_DEBOUNCE_MS (10)
+
 static struct gpio_callback control_gpio_callback;
+
 static atomic_t control_action_pending;
+static atomic_t control_action_current;
 
 static void control_work_handler(struct k_work* work);
 K_WORK_DELAYABLE_DEFINE(control_work, control_work_handler);
 
-static void control_gpio_callback_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
+// Note: This GPIO handler shares an ISR with elevated interrupt priority. Be quick.
+// TODO: Change the hardware to use an EXTI line with lower interrupt priotity for this handler.
+static void control_gpio_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
     gpio_port_value_t value = 0;
     gpio_port_get(port, &value);
     bool control_up = value & BIT(control_up_gpio.pin);
@@ -31,7 +37,7 @@ static void control_gpio_callback_handler(const struct device *port, struct gpio
         action = CONTROL_ACTION_RELEASE;
     }
     atomic_set(&control_action_pending, action);
-    k_work_reschedule(&control_work, K_MSEC(10));
+    k_work_reschedule(&control_work, K_MSEC(CONTROL_DEBOUNCE_MS));
 }
 
 static void control_work_handler(struct k_work* work) {
@@ -55,7 +61,7 @@ static void control_work_handler(struct k_work* work) {
         k_work_reschedule(&control_work, K_MSEC(500));
     }
 
-    control_action_callback(action);
+    atomic_set(&control_action_current, action);
 }
 
 int control_init(void) {
@@ -67,23 +73,23 @@ int control_init(void) {
     if (port != control_down_gpio.port) {
         return -EIO;
     }
-    gpio_init_callback(&control_gpio_callback, control_gpio_callback_handler,
+    gpio_init_callback(&control_gpio_callback, control_gpio_handler,
         BIT(control_up_gpio.pin) | BIT(control_down_gpio.pin));
 
-    if ((err = gpio_pin_configure_dt(&control_up_gpio, GPIO_INPUT))) {
+    if ((err = gpio_pin_configure_dt(&control_up_gpio, GPIO_INPUT)) ||
+            (err = gpio_pin_configure_dt(&control_down_gpio, GPIO_INPUT))) {
         return err;
     }
-    if ((err = gpio_pin_configure_dt(&control_down_gpio, GPIO_INPUT))) {
-        return err;
-    }
-    if ((err = gpio_pin_interrupt_configure_dt(&control_up_gpio, GPIO_INT_EDGE_BOTH))) {
-        return err;
-    }
-    if ((err = gpio_pin_interrupt_configure_dt(&control_down_gpio, GPIO_INT_EDGE_BOTH))) {
+    if ((err = gpio_pin_interrupt_configure_dt(&control_up_gpio, GPIO_INT_EDGE_BOTH)) ||
+            (err = gpio_pin_interrupt_configure_dt(&control_down_gpio, GPIO_INT_EDGE_BOTH))) {
         return err;
     }
     if ((err = gpio_add_callback(port, &control_gpio_callback))) {
         return err;
     }
     return 0;
+}
+
+enum control_action control_get_action_current(void) {
+    return atomic_get(&control_action_current);
 }

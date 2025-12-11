@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "errors.h"
+
 enum span_position {
     SPAN_POSITION_UNKNOWN = 0,
     SPAN_POSITION_EXTENDED = 1,
@@ -21,7 +23,8 @@ enum span_position span_get_position(void);
  * 
  * @retval 0 If the action is done.
  * @retval 1 If the action is still in progress.
- * @return -errno If an error occurred.
+ * @retval SPAN_* A specific error from the span component.
+ * @return -errno If a generic error occurred.
  */
 
 /**
@@ -51,6 +54,6 @@ int span_poll_retract(void);
  * @brief Jog specific actuators in a particular direction under manual control.
  * 
  * @param extend Whether to extend the actuators or retract them.
- * @param actuator_mask Combine BIT(0), BIT(1), BIT(2), or BIT(3) to address specific actuators.
+ * @param actuator_set Combine BIT(0), BIT(1), BIT(2), or BIT(3) to address specific actuators.
  */
-int span_poll_jog(bool extend, unsigned actuator_mask);
+int span_poll_jog(bool extend, unsigned actuator_set);
