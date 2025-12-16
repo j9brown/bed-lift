@@ -9,6 +9,8 @@
 
 #include "errors.h"
 
+int lift_init(void);
+
 enum lift_position {
     LIFT_POSITION_UNKNOWN = 0,
     LIFT_POSITION_LOWER_LIMIT = 1,
@@ -19,8 +21,17 @@ enum lift_position {
     LIFT_POSITION_UPPER_LIMIT = 6,
 };
 
-int lift_init(void);
 enum lift_position lift_get_position(void);
+
+enum lift_state {
+    LIFT_STATE_HALT = 0,
+    LIFT_STATE_RAISE = 1,
+    LIFT_STATE_LOWER = 2,
+    LIFT_STATE_DONE = 3,
+    LIFT_STATE_ERROR = 4,
+};
+
+enum lift_state lift_get_state(void);
 
 /*
  * The poll functions perform an action incrementally while keeping the actuators synchronized.

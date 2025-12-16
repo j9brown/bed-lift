@@ -1,3 +1,7 @@
+/**
+ * @file Component to indicate status with color and flashing patterns.
+ */
+
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
 
@@ -12,6 +16,7 @@ K_SEM_DEFINE(indicator_sem, 1, 1);
 static const indicator_pattern_t *indicator_pattern_current;
 static unsigned indicator_pattern_index;
 static unsigned indicator_pattern_cycle;
+static unsigned indicator_pattern_param;
 static bool indicator_pattern_on;
 
 static void indicator_pattern_handler(struct k_work* work);
@@ -103,7 +108,8 @@ void indicator_pattern_advance_l() {
             }
         } else {
             indicator_pattern_cycle += 1;
-            if (indicator_pattern_cycle >= entry->cycles) {
+            unsigned cycles = (entry->cycles == INDICATOR_PATTERN_PARAM_CYCLES ? indicator_pattern_param : entry->cycles);
+            if (indicator_pattern_cycle >= cycles) {
                 indicator_pattern_index += 1;
                 indicator_pattern_cycle = 0;
             }
@@ -127,10 +133,11 @@ static void indicator_pattern_handler(struct k_work* work) {
     k_sem_give(&indicator_sem);
 }
 
-void indicator_pattern(const indicator_pattern_t *pattern) {
+void indicator_pattern(const indicator_pattern_t *pattern, unsigned param) {
     k_sem_take(&indicator_sem, K_FOREVER);
-    if (indicator_pattern_current != pattern) {
+    if (indicator_pattern_current != pattern || indicator_pattern_param != param) {
         indicator_pattern_current = pattern;
+        indicator_pattern_param = param;
         if (pattern) {
             indicator_pattern_index = 0;
             indicator_pattern_cycle = 0;

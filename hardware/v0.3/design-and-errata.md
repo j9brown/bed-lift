@@ -64,7 +64,6 @@ TODO:
 - Maybe remove the serial port connector and repurpose the pins.
 - Maybe split the `DRV_SLEEP` signal for the two groups of motor drivers to remove a dependency between the drivers in firmware.
 - Supply the STEP signal from a timer capable GPIO.
-- Supply the DIR signal from a GPIO.
 - Provide PWM capable outputs for the lift motors.
 - Gate the motor driver SLEEP through a 2 pin e-stop switch connector, sense the result with a GPIO.
 - Ensure these signals share a port for efficient reading
@@ -73,6 +72,5 @@ TODO:
   - LIFT2_HALL1 + LIFT2_HALL2 (PA) --> could combine with other hall port
   - CTRL_LOWER + CTRL_RAISE (PB)
 - Ensure each GPIO pin that will have an interrupt assigned has a unique pin number because there is one only EXTI line per pin number independent of the number of ports
-- Remove the I2C bus and bus isolator because it isn't really needed, leave the serial port available for remote communication possibilities
 - Replace the TagConnect pads with an STDC14 1.27 mm connector for a stronger mechanical attachment when debugging in-situ
 - Add 5 V LDO (LP2985-50DBVR) for the hall sensors instead of a buffer.  Ensure there is a pull-down from ON/OFF to GND to ensure the LDO shuts off when the MCU is not driving the pin.  Should already be the case if enabled by DRV_SLEEP.

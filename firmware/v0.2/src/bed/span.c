@@ -51,7 +51,7 @@
 
 // When set to 1, assumes that the home action reached its target even if
 // not all of the motors stalled.
-#define SPAN_DEBUG_HOME_ASSUME_END_OF_TRAVEL 1
+// #define SPAN_DEBUG_HOME_ASSUME_END_OF_TRAVEL 1
 
 // When set to 1, enables stall learning
 // Results can only be observed with the debugger because logging is disabled.
@@ -629,6 +629,33 @@ enum span_position span_get_position(void) {
     return span_position;
 }
 
+enum span_state span_get_state(void) {
+    enum span_state result;
+    k_sem_take(&span_state_sem, K_FOREVER);
+
+    switch (span_loop_data.loop_state) {
+        case SPAN_LOOP_HALT:
+            result = SPAN_STATE_HALT;
+            break;
+        case SPAN_LOOP_RUN:
+            if (span_loop_data.velocity_target) {
+                result = span_loop_data.velocity_target > 0 ? SPAN_STATE_EXTEND : SPAN_STATE_RETRACT;
+            } else {
+                result = SPAN_STATE_HALT;
+            }
+            break;
+        case SPAN_LOOP_DONE:
+            result = SPAN_STATE_DONE;
+            break;
+        default:
+            result = SPAN_STATE_ERROR;
+            break;
+    }
+
+    k_sem_give(&span_state_sem);
+    return result;
+}
+
 int span_poll_sleep(void) {
     if (span_action_state == SPAN_ACTION_SLEEP_DONE) {
         return 0;
@@ -721,9 +748,9 @@ static int span_poll_home(bool extend) {
         }
 #if !SPAN_DEBUG_HOME_ASSUME_END_OF_TRAVEL
         for (unsigned i = 0; i < SPAN_NUM_ACTUATORS; i++) {
-            if (span_actuator_state[i] != SPAN_ACTUATOR_STALL) {
+            if (span_loop_data.actuator_state[i] != SPAN_ACTUATOR_STALL) {
                 span_action_state = SPAN_ACTION_ABORT;
-                err = SPAN_POLL_ERROR_NOT_HOME;
+                err = SPAN_ERROR_NOT_HOME;
                 goto give_state_sem_and_return;
             }
         }

@@ -219,7 +219,7 @@ struct lift_loop_data {
     // State of the control loop. The loop only drives the actuators when in the RUN state.
     enum lift_loop_state loop_state;
 
-    // The LIFT_ERROR_* error associated with the LIFT_LOOP_ERROR state.
+    // The error associated with the LIFT_LOOP_ERROR state.
     int loop_error;
 
     // The type of movement to perform.
@@ -537,6 +537,27 @@ enum lift_position lift_get_position(void) {
     enum lift_position result;
     K_SPINLOCK(&lift_lock) {
         result = lift_loop_data.position;
+    }
+    return result;
+}
+
+enum lift_state lift_get_state(void) {
+    enum lift_state result;
+    K_SPINLOCK(&lift_lock) {
+        switch (lift_loop_data.loop_state) {
+            case LIFT_LOOP_HALT:
+                result = LIFT_STATE_HALT;
+                break;
+            case LIFT_LOOP_RUN:
+                result = lift_loop_data.raise ? LIFT_STATE_RAISE : LIFT_STATE_LOWER;
+                break;
+            case LIFT_LOOP_DONE:
+                result = LIFT_STATE_DONE;
+                break;
+            default:
+                result = LIFT_STATE_ERROR;
+                break;
+        }
     }
     return result;
 }

@@ -9,14 +9,25 @@
 
 #include "errors.h"
 
+int span_init(void);
+
 enum span_position {
     SPAN_POSITION_UNKNOWN = 0,
     SPAN_POSITION_EXTENDED = 1,
     SPAN_POSITION_RETRACTED = 2,
 };
 
-int span_init(void);
 enum span_position span_get_position(void);
+
+enum span_state {
+    SPAN_STATE_HALT = 0,
+    SPAN_STATE_EXTEND = 1,
+    SPAN_STATE_RETRACT = 2,
+    SPAN_STATE_DONE = 3,
+    SPAN_STATE_ERROR = 4,
+};
+
+enum span_state span_get_state(void);
 
 /*
  * The poll functions perform an action incrementally while keeping the actuators synchronized.

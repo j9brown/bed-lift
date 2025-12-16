@@ -34,6 +34,7 @@ void indicator_on(unsigned hue);
  * The time intervals are specified in 0.1 second increments.
  * Terminate an array of pattern entries with an entry with cycles = 0.
  * If the last entry has zero on_time then the pattern repeats after off_time interval, otherwise it stops.
+ * If the value of cycles is INDICATOR_PATTERN_PARAM_CYCLES then the pattern parameter determines the count.
  */
 struct indicator_pattern_entry {
     unsigned hue : 16;
@@ -42,11 +43,12 @@ struct indicator_pattern_entry {
     unsigned cycles : 6;
 };
 typedef struct indicator_pattern_entry indicator_pattern_t;
+#define INDICATOR_PATTERN_PARAM_CYCLES (0x3f)
 #define INDICATOR_PATTERN_ENTRY(hue_, on_time_, off_time_, cycles_) { .hue = hue_, .on_time = on_time_, .off_time = off_time_, .cycles = cycles_ }
 #define INDICATOR_PATTERN_ENTRY_REPEAT(delay_) INDICATOR_PATTERN_ENTRY(0, 0, delay_, 0)
 #define INDICATOR_PATTERN_ENTRY_END INDICATOR_PATTERN_ENTRY(0, 1, 0, 0)
-#define INDICATOR_PATTERN_ONCE(name, ...) const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_END }
-#define INDICATOR_PATTERN_LOOP(name, delay_, ...) const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_REPEAT(delay_) }
+#define INDICATOR_PATTERN_ONCE(name, ...) static const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_END }
+#define INDICATOR_PATTERN_LOOP(name, delay_, ...) static const indicator_pattern_t name[] = { __VA_ARGS__, INDICATOR_PATTERN_ENTRY_REPEAT(delay_) }
 
 /**
  * @brief Perform an indicator pattern.
@@ -57,5 +59,6 @@ typedef struct indicator_pattern_entry indicator_pattern_t;
  * @param pattern Pattern to perform, or NULL to stop the pattern at the end
  * its current on-time cycle or turn the indicator off immediately if no pattern
  * is running.
+ * @param param Parameter value for INDICATOR_PATTERN_PARAM_CYCLES, 0 if unused.
  */
-void indicator_pattern(const indicator_pattern_t *pattern);
+void indicator_pattern(const indicator_pattern_t *pattern, unsigned cycles);
