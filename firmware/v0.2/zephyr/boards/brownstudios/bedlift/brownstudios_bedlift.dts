@@ -33,17 +33,19 @@
 		span_step: span_step { /* frequency varies at runtime */
 			pwms = <&pwm17 1 0 PWM_POLARITY_NORMAL>;
 		};
+
+		/* polarity inverted to facilitate use of slow decay mode */
 		lift1_in1: lift1_in1 {
-			pwms = <&pwm3 3 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+			pwms = <&pwm3 3 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 		lift1_in2: lift1_in2 {
-			pwms = <&pwm3 2 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+			pwms = <&pwm3 2 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 		lift2_in1: lift2_in1 {
-			pwms = <&pwm3 1 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+			pwms = <&pwm3 1 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 		lift2_in2: lift2_in2 {
-			pwms = <&pwm3 4 PWM_USEC(40) PWM_POLARITY_NORMAL>;
+			pwms = <&pwm3 4 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 	};
 
@@ -184,13 +186,6 @@
 		 *   8: 0.8 A
 		 */
 		trq-dac = <8>;
-
-		/* Stall threshold
-		 * This value seems to be sensitive to step speed.  At 25 mm/s, stall learning
-		 * yields a recommended threshold of 2000 but at 5 mm/s it needs to be less than
-		 * 100 to avoid premature stalls.
-		 */
-		stall-th = <50>;
 	};
 };
 

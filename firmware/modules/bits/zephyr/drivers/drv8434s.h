@@ -132,6 +132,19 @@ int drv8434s_set_output_enable(const struct device *dev, const struct drv8434s_o
         uint64_t enabled_set);
 
 /**
+ * @brief Set the stall threshold for all devices.
+ *
+ * @param dev DRV8434S device node.
+ * @param options Options for the request.
+ * @param enabled_set Set bits with BIT64(index) for the devices whose outputs are to
+ * be enabled, all other devices will have their outputs disabled.
+ * @retval 0 If successful.
+ * @retval -EINVAL If the chain is stopped.
+ * @retval -EBUSY If an asynchronous operation is in progress.
+ * @retval -errno Negative errno code on failure.
+ */
+
+/**
  * @brief Determines the indexer step input.
  */
 enum drv8434s_step_input {
@@ -247,10 +260,23 @@ int drv8434s_step(const struct device *dev, const struct drv8434s_options *optio
         const uint8_t* step_requests);
 
 /**
+ * @brief Set the stall threshold.  Has the side-effect of disabling stall learning.
+ *
+ * @param dev DRV8434S device node.
+ * @param options Options for the request.
+ * @param stall_th Stall threshold, or 0 to disable stall detection.
+ * @retval 0 If successful.
+ * @retval -EINVAL If the chain is stopped.
+ * @retval -EBUSY If an asynchronous operation is in progress.
+ * @retval -errno Negative errno code on failure.
+ */
+int drv8434s_set_stall_threshold(const struct device *dev, const struct drv8434s_options *options, uint16_t stall_th);
+
+/**
  * @brief Set or clear the STL_LRN bit to learn the stall threshold.
  *
  * Run the motor at steady state before calling this function.
- * Lt the motor run for at least 16 electrical cycles then intentionally stall the motor.
+ * Let the motor run for at least 16 electrical cycles then intentionally stall the motor.
  * Call drv8434s_get_stall_learn_status to obtain the result of learning.
  *
  * @param dev DRV8434S device node.

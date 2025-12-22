@@ -85,17 +85,18 @@ INDICATOR_PATTERN_LOOP(indicator_pattern_jog_span, 4,
     INDICATOR_PATTERN_ENTRY(INDICATOR_HUE_BLUE, 1, 3, INDICATOR_PATTERN_PARAM_CYCLES));
 
 struct jog_span_spec {
+    enum span_move move;
     unsigned actuator_set;
     unsigned indicator_pattern_param;
 };
 static const struct jog_span_spec jog_span_specs[] = {
-    { .actuator_set = BIT(0) | BIT(1) | BIT(2) | BIT(3), .indicator_pattern_param = 1 },
-    { .actuator_set = BIT(0) | BIT(1), .indicator_pattern_param = 2 },
-    { .actuator_set = BIT(2) | BIT(3), .indicator_pattern_param = 3 },
-    { .actuator_set = BIT(0), .indicator_pattern_param = 4 },
-    { .actuator_set = BIT(1), .indicator_pattern_param = 5 },
-    { .actuator_set = BIT(2), .indicator_pattern_param = 6 },
-    { .actuator_set = BIT(3), .indicator_pattern_param = 7 },
+    { .move = SPAN_MOVE_HOME, .actuator_set = SPAN_ACTUATOR_SET_ALL, .indicator_pattern_param = 1 },
+    { .move = SPAN_MOVE_HOME, .actuator_set = SPAN_ACTUATOR_SET_01, .indicator_pattern_param = 2 },
+    { .move = SPAN_MOVE_HOME, .actuator_set = SPAN_ACTUATOR_SET_23, .indicator_pattern_param = 3 },
+    { .move = SPAN_MOVE_JOG, .actuator_set = BIT(0), .indicator_pattern_param = 4 },
+    { .move = SPAN_MOVE_JOG, .actuator_set = BIT(1), .indicator_pattern_param = 5 },
+    { .move = SPAN_MOVE_JOG, .actuator_set = BIT(2), .indicator_pattern_param = 6 },
+    { .move = SPAN_MOVE_JOG, .actuator_set = BIT(3), .indicator_pattern_param = 7 },
 };
 
 /*
@@ -140,11 +141,11 @@ static int do_hold_action(bool up, struct monitor_setting setting) {
             return bed_poll_pose(up ? BED_POSE_LOUNGE : BED_POSE_SLEEP);
         case MENU_JOG_LIFT: {
             int span_err = span_poll_standby();
-            int lift_err = lift_poll_jog(up, jog_lift_specs[menu_mode].move);
+            int lift_err = lift_poll_jog(jog_lift_specs[menu_mode].move, up);
             return span_err ? span_err : lift_err;
         }
         case MENU_JOG_SPAN: {
-            int span_err = span_poll_jog(up, jog_span_specs[menu_mode].actuator_set);
+            int span_err = span_poll_jog(jog_span_specs[menu_mode].move, up, jog_span_specs[menu_mode].actuator_set);
             int lift_err = lift_poll_standby();
             return span_err ? span_err : lift_err;
         }

@@ -68,7 +68,7 @@ enum lift_move {
 /**
  * @brief Jog specific actuators in a particular direction under manual control.
  * 
- * @param raise Whether to raise the actuators or lower them.
  * @param move The type of movement to perform.
+ * @param raise Whether to raise the actuators or lower them.
  */
-int lift_poll_jog(bool raise, enum lift_move move);
+int lift_poll_jog(enum lift_move move, bool raise);

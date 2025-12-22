@@ -56,7 +56,7 @@ TODO:
   - Although TIM3 can be stopped with DBG_TIM3_STOP, it doesn't seem to support disabling the output
 - Move the hall signal pairs to ports on EXTI0-1 and EXTI2-3 to allow for higher priority interrupt handling of these signals compared to all of the other signals that share the EXTI4-15 vector. Unfortunate STM32C0 only has one advanced timer otherwise the timer could decode the signal in hardware.
 - Use TIM14/16/17 for span motor STEP
-- Upgrade to LQFP48 to alleviate pin scarcity
+- Upgrade to LQFP48 to alleviate pin scarcity, expose excess pins at a break-out for future uses
 - Upgrade to more flash memory, maybe 64 KB for future proofing
 - Maybe add bulk capacitors for every motor driver, perhaps 47 uF aluminum polymer to distribute the switching current, although it seems to be working fine.
 - Maybe add a connector for a PWM fan.
@@ -74,3 +74,4 @@ TODO:
 - Ensure each GPIO pin that will have an interrupt assigned has a unique pin number because there is one only EXTI line per pin number independent of the number of ports
 - Replace the TagConnect pads with an STDC14 1.27 mm connector for a stronger mechanical attachment when debugging in-situ
 - Add 5 V LDO (LP2985-50DBVR) for the hall sensors instead of a buffer.  Ensure there is a pull-down from ON/OFF to GND to ensure the LDO shuts off when the MCU is not driving the pin.  Should already be the case if enabled by DRV_SLEEP.
+- Consider adding 4 more limit switch inputs for the span. The stepper stall detection works but it can't guarantee the actuator actually reached the end-stop as opposed to getting jammed by an external force.

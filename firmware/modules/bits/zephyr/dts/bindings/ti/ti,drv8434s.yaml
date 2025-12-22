@@ -110,3 +110,6 @@ properties:
 
       The default disables stall detection because it requires careful tuning.
       This value is ignored if the decay mode is not Smart tune ripple control.
+      This value determines the initial configuration of the driver when started and it can
+      subsequently be changed at runtime to set different thresholds for different motor speeds.
+

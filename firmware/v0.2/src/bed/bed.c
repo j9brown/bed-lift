@@ -7,7 +7,7 @@
 
 // If true, allows the span and lift to move together while in the
 // safe zone, otherwise the span movement is required to complete first.
-//#define BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE 1
+#define BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE 1
 
 static enum bed_pose bed_current_pose;
 static enum bed_pose bed_target_pose;

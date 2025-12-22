@@ -61,10 +61,21 @@ int span_poll_extend(void);
  */
 int span_poll_retract(void);
 
+/** @brief The type of span movement to perform. */
+enum span_move {
+    SPAN_MOVE_HOME = 0, // Full travel movement with acceleration
+    SPAN_MOVE_JOG = 1,  // Slow incremental movement with no acceleration
+};
+
+#define SPAN_ACTUATOR_SET_ALL (BIT(0) | BIT(1) | BIT(2) | BIT(3))
+#define SPAN_ACTUATOR_SET_01 (BIT(0) | BIT(1))
+#define SPAN_ACTUATOR_SET_23 (BIT(2) | BIT(3))
+
 /**
  * @brief Jog specific actuators in a particular direction under manual control.
  * 
+ * @param move The type of movement to perform.
  * @param extend Whether to extend the actuators or retract them.
  * @param actuator_set Combine BIT(0), BIT(1), BIT(2), or BIT(3) to address specific actuators.
  */
-int span_poll_jog(bool extend, unsigned actuator_set);
+int span_poll_jog(enum span_move move, bool extend, unsigned actuator_set);

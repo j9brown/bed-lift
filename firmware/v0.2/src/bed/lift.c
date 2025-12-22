@@ -95,7 +95,7 @@ static void lift_limit_update_l(uint32_t cycle) {
  * LIFT HALL SENSORS
  */
 
-// Lift stationary time: 500 ms.
+// Lift stationary time.
 // The actuator is determined to be stationary when there is no change in position within a
 // certain time. This condition generally indicates that the actuator is not powered, stalled,
 // or has reached one of its internal limits.
@@ -156,7 +156,7 @@ static void lift2_hall_gpio_handler(const struct device *port, struct gpio_callb
 
 static inline void lift_hall_reset_origin_l(void) {
     lift1_hall_data.origin = lift1_hall_data.raw_position;
-    lift2_hall_data.origin = lift1_hall_data.raw_position;
+    lift2_hall_data.origin = lift2_hall_data.raw_position;
 }
 
 // This function must be called on every timer tick (before the cycle counter rolls over).
@@ -271,8 +271,8 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
     K_SPINLOCK(&lift_lock) {
         // Update the current state of the lift.
         lift_limit_update_l(cycle);
-        lift_hall_update_l(&lift1_hall_data, cycle, lift_loop_data.lift1_duty);
-        lift_hall_update_l(&lift2_hall_data, cycle, lift_loop_data.lift2_duty);
+        lift_hall_update_l(&lift1_hall_data, cycle, !!lift_loop_data.lift1_duty);
+        lift_hall_update_l(&lift2_hall_data, cycle, !!lift_loop_data.lift2_duty);
 
         // Update the overall position of the lift based on the limit switches. Assume that if an actuator is
         // stationary while commanded to move in the direction of the limit then the actuator's internal limit
@@ -287,6 +287,7 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                         lift_loop_data.loop_state = LIFT_LOOP_DONE;
                         goto halt_and_exit_spinlock;
                     }
+                    stall = false;
                 } else if (lift_loop_data.position != LIFT_POSITION_LOWER_LIMIT ||
                         lift_loop_data.lift1_duty || lift_loop_data.lift2_duty) {
                     lift_loop_data.position = LIFT_POSITION_BELOW_SAFE_ZONE;
@@ -306,6 +307,7 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                         lift_loop_data.loop_state = LIFT_LOOP_DONE;
                         goto halt_and_exit_spinlock;
                     }
+                    stall = false;
                 } else if (lift_loop_data.position != LIFT_POSITION_UPPER_LIMIT ||
                         lift_loop_data.lift1_duty || lift_loop_data.lift2_duty) {
                     lift_loop_data.position = LIFT_POSITION_ABOVE_CEILING;
@@ -354,7 +356,7 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                 break;
             case LIFT_MOVE_TANDEM: {
                 const int lift1_position = lift1_hall_data.raw_position - lift1_hall_data.origin;
-                const int lift2_position = lift2_hall_data.raw_position - lift1_hall_data.origin;
+                const int lift2_position = lift2_hall_data.raw_position - lift2_hall_data.origin;
                 const int delta = lift2_position - lift1_position;
                 if (abs(delta) > LIFT_LOOP_MAX_TANDEM_ERROR) {
                     // While it might be possible to recover from a large positional error by only
@@ -368,10 +370,11 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                 lift_loop_data.control_error[2] = lift_loop_data.control_error[1];
                 lift_loop_data.control_error[1] = lift_loop_data.control_error[0];
                 lift_loop_data.control_error[0] = delta * sign;
+                const q15_t extreme_balance = Q15_ONE * 15 / 16; // ensure resulting duty is always non-zero
                 lift_loop_data.control_balance = q15_clamp(lift_loop_data.control_balance +
                         LIFT_LOOP_PID_A0 * lift_loop_data.control_error[0] +
                         LIFT_LOOP_PID_A1 * lift_loop_data.control_error[1] +
-                        LIFT_LOOP_PID_A2 * lift_loop_data.control_error[2], -Q15_ONE, Q15_ONE);
+                        LIFT_LOOP_PID_A2 * lift_loop_data.control_error[2], -extreme_balance, extreme_balance);
                 const q15_t reduced_duty = q15_mul_q15(full_duty, lift_loop_data.control_balance);
                 if (reduced_duty >= 0) {
                     lift_loop_data.lift1_duty = full_duty * sign;
@@ -395,30 +398,36 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
     }
 
     // Update the motor PWM.
+    // Use slow decay ("brake") for the off duty mode to let current recirculate through the
+    // motor windings.  If use used fast decay ("coast") then the energy would be shunted back
+    // to the power supply and raise the voltage at the VM terminal.  This also has the effect
+    // of stopping the motor more quickly at zero duty cycle.
+    // Note that the PWM polarity is inverted by the devicetree overlay to facilitate use of
+    // slow decay mode.
     const struct device *lift_in_dev = lift1_in1_pwm.dev;
     const uint32_t lift_in_pulse_period_cycles = lift_loop_data.pulse_period_cycles;
     int err = 0;
-    if (lift1_duty >= 0) {
+    if (lift1_duty <= 0) {
         err |= pwm_set_cycles(lift_in_dev, lift1_in1_pwm.channel, lift_in_pulse_period_cycles,
-                q15_to_int(lift1_duty * lift_in_pulse_period_cycles), lift1_in1_pwm.flags);
+                q15_to_int(-lift1_duty * lift_in_pulse_period_cycles), lift1_in1_pwm.flags);
         err |= pwm_set_cycles(lift_in_dev, lift1_in2_pwm.channel, lift_in_pulse_period_cycles,
                 0, lift1_in2_pwm.flags);
     } else {
         err |= pwm_set_cycles(lift_in_dev, lift1_in1_pwm.channel, lift_in_pulse_period_cycles,
                 0, lift1_in1_pwm.flags);
         err |= pwm_set_cycles(lift_in_dev, lift1_in2_pwm.channel, lift_in_pulse_period_cycles,
-                q15_to_int(-lift1_duty * lift_in_pulse_period_cycles), lift1_in2_pwm.flags);
+                q15_to_int(lift1_duty * lift_in_pulse_period_cycles), lift1_in2_pwm.flags);
     }
-    if (lift2_duty >= 0) {
+    if (lift2_duty <= 0) {
         err |= pwm_set_cycles(lift_in_dev, lift2_in1_pwm.channel, lift_in_pulse_period_cycles,
-                q15_to_int(lift2_duty * lift_in_pulse_period_cycles), lift2_in1_pwm.flags);
+                q15_to_int(-lift2_duty * lift_in_pulse_period_cycles), lift2_in1_pwm.flags);
         err |= pwm_set_cycles(lift_in_dev, lift2_in2_pwm.channel, lift_in_pulse_period_cycles,
                 0, lift2_in2_pwm.flags);
     } else {
         err |= pwm_set_cycles(lift_in_dev, lift2_in1_pwm.channel, lift_in_pulse_period_cycles,
                 0, lift2_in1_pwm.flags);
         err |= pwm_set_cycles(lift_in_dev, lift2_in2_pwm.channel, lift_in_pulse_period_cycles,
-                q15_to_int(-lift2_duty * lift_in_pulse_period_cycles), lift2_in2_pwm.flags);
+                q15_to_int(lift2_duty * lift_in_pulse_period_cycles), lift2_in2_pwm.flags);
     }
     if (err) {
         K_SPINLOCK(&lift_lock) {
@@ -430,11 +439,11 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
     }
 }
 
-static void lift_loop_init_l(bool raise, enum lift_loop_state loop_state, enum lift_move move) {
-    lift_loop_data.raise = raise;
+static void lift_loop_init_l(enum lift_loop_state loop_state, enum lift_move move, bool raise) {
     lift_loop_data.loop_state = loop_state;
     lift_loop_data.loop_error = 0;
     lift_loop_data.move = move;
+    lift_loop_data.raise = raise;
     lift_loop_data.lift1_duty = 0;
     lift_loop_data.lift2_duty = 0;
     lift_loop_data.control_balance = 0;
@@ -444,7 +453,7 @@ static void lift_loop_init_l(bool raise, enum lift_loop_state loop_state, enum l
 }
 
 static void lift_loop_halt_l(void) {
-    lift_loop_init_l(false, LIFT_LOOP_HALT, LIFT_MOVE_INDEPENDENT_BOTH);
+    lift_loop_init_l(LIFT_LOOP_HALT, LIFT_MOVE_INDEPENDENT_BOTH, false);
 }
 
 static void lift_loop_feed_l(void) {
@@ -586,16 +595,16 @@ static int lift_poll_await_done_l(void) {
     return 0; // done
 }
 
-static int lift_poll_move(bool raise, bool jog, enum lift_move move) {
+static int lift_poll_move(enum lift_move move, bool raise, bool jog) {
+    static enum lift_move actual_move;
     static bool actual_raise;
     static bool actual_jog;
-    static enum lift_move actual_move;
 
-    if (actual_raise != raise || actual_jog != jog || actual_move != move) {
+    if (actual_move != move || actual_raise != raise || actual_jog != jog) {
         lift_action_state = LIFT_ACTION_ABORT;
+        actual_move = move;
         actual_raise = raise;
         actual_jog = jog;
-        actual_move = move;
     }
     if (lift_action_state == LIFT_ACTION_MOVE_DONE) {
         return 0;
@@ -607,7 +616,7 @@ static int lift_poll_move(bool raise, bool jog, enum lift_move move) {
             if (jog) {
                 lift_hall_reset_origin_l();
             }
-            lift_loop_init_l(raise, LIFT_LOOP_RUN, move);
+            lift_loop_init_l(LIFT_LOOP_RUN, move, raise);
             lift_action_state = LIFT_ACTION_MOVE_TRAVEL;
         }
         if (lift_action_state == LIFT_ACTION_MOVE_TRAVEL) {
@@ -623,13 +632,13 @@ static int lift_poll_move(bool raise, bool jog, enum lift_move move) {
 }
 
 int lift_poll_raise(void) {
-    return lift_poll_move(true, false, LIFT_MOVE_TANDEM);
+    return lift_poll_move(LIFT_MOVE_TANDEM, true, false);
 }
 
 int lift_poll_lower(void) {
-    return lift_poll_move(false, false, LIFT_MOVE_TANDEM);
+    return lift_poll_move(LIFT_MOVE_TANDEM, false, false);
 }
 
-int lift_poll_jog(bool raise, enum lift_move move) {
-    return lift_poll_move(raise, true, move);
+int lift_poll_jog(enum lift_move move, bool raise) {
+    return lift_poll_move(move, raise, true);
 }
