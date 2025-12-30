@@ -23,7 +23,7 @@ static void indicator_pattern_handler(struct k_work* work);
 K_WORK_DELAYABLE_DEFINE(indicator_pattern_work, indicator_pattern_handler);
 
 // Brightness scale factors: 0 (off), 64 (full bright)
-#define INDICATOR_RED_SCALE (64)
+#define INDICATOR_RED_SCALE (20)
 #define INDICATOR_GREEN_SCALE (8)
 #define INDICATOR_BLUE_SCALE (12)
 #define INDICATOR_SCALE_BITS (6)
@@ -66,9 +66,9 @@ static void indicator_pwm_set_on_l(unsigned hue) {
         g = 0;
     }
 
-    pwm_set_pulse_dt(&red_pwm, (r * red_pwm.period * INDICATOR_RED_SCALE) >> (8 + INDICATOR_SCALE_BITS));
-    pwm_set_pulse_dt(&green_pwm, (g * green_pwm.period * INDICATOR_GREEN_SCALE) >> (8 + INDICATOR_SCALE_BITS));
-    pwm_set_pulse_dt(&blue_pwm, (b * blue_pwm.period * INDICATOR_BLUE_SCALE) >> (8 + INDICATOR_SCALE_BITS));
+    pwm_set_pulse_dt(&red_pwm, (((r * red_pwm.period) >> 8) * INDICATOR_RED_SCALE) >> INDICATOR_SCALE_BITS);
+    pwm_set_pulse_dt(&green_pwm, (((g * green_pwm.period) >> 8) * INDICATOR_GREEN_SCALE) >> INDICATOR_SCALE_BITS);
+    pwm_set_pulse_dt(&blue_pwm, (((b * blue_pwm.period) >> 8) * INDICATOR_BLUE_SCALE) >> INDICATOR_SCALE_BITS);
 }
 
 void indicator_off() {

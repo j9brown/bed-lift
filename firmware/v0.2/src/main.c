@@ -185,10 +185,10 @@ static void show_status(void) {
                 case BED_STATE_MOVING:
                     switch (bed_get_target_pose()) {
                         case BED_POSE_LOUNGE:
-                            indicator_on(INDICATOR_HUE_CYAN - bed_get_progress() * (INDICATOR_HUE_CYAN - INDICATOR_HUE_GREEN) / 100);
+                            indicator_on(k_uptime_get() << 5);
                             break;
                         case BED_POSE_SLEEP:
-                            indicator_on(INDICATOR_HUE_BLUE + bed_get_progress() * (INDICATOR_HUE_MAGENTA - INDICATOR_HUE_BLUE) / 100);
+                            indicator_on(-k_uptime_get() << 5);
                             break;
                         default:
                             __ASSERT(false, "");
@@ -196,17 +196,7 @@ static void show_status(void) {
                     }
                     break;
                 case BED_STATE_DONE:
-                    switch (bed_get_current_pose()) {
-                        case BED_POSE_LOUNGE:
-                            indicator_on(INDICATOR_HUE_GREEN);
-                            break;
-                        case BED_POSE_SLEEP:
-                            indicator_on(INDICATOR_HUE_MAGENTA);
-                            break;
-                        default:
-                            __ASSERT(false, "");
-                            break;
-                    }
+                    indicator_on(INDICATOR_HUE_GREEN);
                     break;
             }
             break;
