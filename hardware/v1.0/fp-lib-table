@@ -4,4 +4,6 @@
   (lib (name "Generic")(type "KiCad")(uri "${KIPRJMOD}/library/Generic/Generic.pretty")(options "")(descr ""))
   (lib (name "DRV8434SPWPR")(type "KiCad")(uri "${KIPRJMOD}/library/DRV8434SPWPR/DRV8434SPWPR.pretty")(options "")(descr ""))
   (lib (name "DRV8874PWPR")(type "KiCad")(uri "${KIPRJMOD}/library/DRV8874PWPR/DRV8874PWPR.pretty")(options "")(descr ""))
+  (lib (name "Samtec")(type "KiCad")(uri "${KIPRJMOD}/library/Samtec")(options "")(descr ""))
+  (lib (name "Heatsink")(type "KiCad")(uri "${KIPRJMOD}/library/Heatsink/Heatsink.pretty")(options "")(descr ""))
 )

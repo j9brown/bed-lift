@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.8,
-          "height": 1.27,
-          "width": 2.54
+          "drill": 2.7,
+          "height": 4.7,
+          "width": 4.7
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -48,7 +48,7 @@
         "silk_text_thickness": 0.1,
         "silk_text_upright": false,
         "zones": {
-          "min_clearance": 0.5
+          "min_clearance": 0.0
         }
       },
       "diff_pair_dimensions": [
@@ -58,7 +58,40 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "hole_clearance|33060000|65360000|d70ae762-9182-49e5-b817-1b20caee6c45|b766239c-99fc-445e-a644-241a59658ecf",
+          ""
+        ],
+        [
+          "hole_clearance|33060000|66640000|062d6830-17c6-4d36-b758-95b082b0bbe9|b766239c-99fc-445e-a644-241a59658ecf",
+          ""
+        ],
+        [
+          "hole_clearance|33590000|65360000|76661729-b286-4ce3-a86c-91f3e089e1fa|b766239c-99fc-445e-a644-241a59658ecf",
+          ""
+        ],
+        [
+          "hole_clearance|33590000|66640000|bc8504f3-8903-4d95-9bc2-d29a4dfb6409|b766239c-99fc-445e-a644-241a59658ecf",
+          ""
+        ],
+        [
+          "hole_clearance|39410000|65360000|86774e6d-84c3-4a12-b0b6-4d7f5189283f|f8ec0f54-183f-4ee1-8917-5bddb10167f2",
+          ""
+        ],
+        [
+          "hole_clearance|39410000|66640000|f0d762e3-f3d9-4d0b-a231-d8296a3dd5af|f8ec0f54-183f-4ee1-8917-5bddb10167f2",
+          ""
+        ],
+        [
+          "hole_clearance|39940000|65360000|d7154af9-6415-425f-8ee0-b188f5d12b15|f8ec0f54-183f-4ee1-8917-5bddb10167f2",
+          ""
+        ],
+        [
+          "hole_clearance|39940000|66640000|38f0f802-8da6-41cd-b6e6-33482442f667|f8ec0f54-183f-4ee1-8917-5bddb10167f2",
+          ""
+        ]
+      ],
       "meta": {
         "version": 2
       },
@@ -191,6 +224,8 @@
         0.2,
         0.3,
         0.4,
+        0.6,
+        0.8,
         1.0,
         1.5,
         2.5,
@@ -562,6 +597,9 @@
       "+3.3V": [
         "Power"
       ],
+      "+5V": [
+        "Power"
+      ],
       "/BUS_3V3": [
         "Power"
       ],
@@ -718,10 +756,19 @@
       "GND": [
         "Power"
       ],
+      "Net-(JP1-C)": [
+        "Power"
+      ],
+      "Net-(Q1-C)": [
+        "Power"
+      ],
       "Net-(U1-BP)": [
         "Power"
       ],
       "Net-(U1-ON{slash}~{OFF})": [
+        "Power"
+      ],
+      "Net-(U2-BP)": [
         "Power"
       ]
     },
@@ -870,6 +917,24 @@
           "group_by": false,
           "label": "#",
           "name": "${ITEM_NUMBER}",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "FT Rotation Offset",
+          "name": "FT Rotation Offset",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "FT Position Offset",
+          "name": "FT Position Offset",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MPN",
+          "name": "MPN",
           "show": false
         }
       ],

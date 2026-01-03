@@ -116,6 +116,8 @@ The DRV8434S stall detection logic requires STEP pulses to arrive at regular int
   - Detach STEP (pin 23) from each DRV8434S, bend it away from the PCB, solder jumpers to PC14 (pin 2) of the microcontroller.
   - Note that the pad is tied to ground underneath the chip so cutting the trace is not practical (unless the whole chip is removed).
 
+The DRV8434S VREF pin is directly connected to DVDD without a voltage divider which results it in receiving 5 V instead of the recommended 3.3 V.  It still works but is out of spec.  When designing the circuit, I assumed incorrectly that DVDD supplied 3.3 V.
+
 Having both groups of motor drivers share the same DRV_SLEEP signal makes it harder to control them independently.  Conversely, it would be nice to gate the sleep signals through a physical emergency stop switch connection.
 
 The lift actuators are synchronized by observing pulses from the hall sensors.  The original plan was to bit-bang the motor drivers to stall whichever motor is falling behind as was done in the v0.1 prototype but we can get smoother operation of the motor and also support a slow-start acceleration ramp using PWM.  Unfortunately, one of the motor driver inputs must be relocated to use the timer function.
