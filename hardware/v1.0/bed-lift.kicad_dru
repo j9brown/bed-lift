@@ -137,3 +137,8 @@
 #	(condition "A.Pad_Type == 'NPTH, mechanical'")
 #)
 #
+
+(rule "Ignore STDC14 connector hole clearance"
+	(constraint hole_clearance (min 0.15mm))
+	(condition "A.memberOfFootprint('Samtec:SAMTEC_FTSH-107-01-L-DV-K-A')")
+)

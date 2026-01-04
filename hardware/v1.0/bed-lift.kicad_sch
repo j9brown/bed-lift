@@ -6613,7 +6613,7 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 214.63) (xy 124.46 214.63)
+			(xy 118.11 214.63) (xy 123.19 214.63)
 		)
 		(stroke
 			(width 0)
@@ -6653,7 +6653,7 @@
 	)
 	(wire
 		(pts
-			(xy 120.65 203.2) (xy 124.46 203.2)
+			(xy 120.65 203.2) (xy 123.19 203.2)
 		)
 		(stroke
 			(width 0)
@@ -7183,7 +7183,7 @@
 	)
 	(wire
 		(pts
-			(xy 119.38 200.66) (xy 124.46 200.66)
+			(xy 119.38 200.66) (xy 123.19 200.66)
 		)
 		(stroke
 			(width 0)
@@ -7413,7 +7413,7 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 209.55) (xy 124.46 209.55)
+			(xy 118.11 209.55) (xy 123.19 209.55)
 		)
 		(stroke
 			(width 0)
@@ -7823,7 +7823,7 @@
 	)
 	(wire
 		(pts
-			(xy 121.92 205.74) (xy 124.46 205.74)
+			(xy 121.92 205.74) (xy 123.19 205.74)
 		)
 		(stroke
 			(width 0)
@@ -8553,7 +8553,7 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 217.17) (xy 124.46 217.17)
+			(xy 118.11 217.17) (xy 123.19 217.17)
 		)
 		(stroke
 			(width 0)
@@ -9283,7 +9283,7 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 219.71) (xy 124.46 219.71)
+			(xy 118.11 219.71) (xy 123.19 219.71)
 		)
 		(stroke
 			(width 0)
@@ -9793,7 +9793,7 @@
 	)
 	(wire
 		(pts
-			(xy 118.11 212.09) (xy 124.46 212.09)
+			(xy 118.11 212.09) (xy 123.19 212.09)
 		)
 		(stroke
 			(width 0)
@@ -10042,7 +10042,7 @@
 		(uuid "1d2691cf-310a-43a3-8750-316c4eb881e6")
 	)
 	(label "EXP_PA8"
-		(at 124.46 214.63 0)
+		(at 123.19 214.63 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10332,7 +10332,7 @@
 		(uuid "552bcbeb-f6c4-41e2-94c8-ded2eaea0756")
 	)
 	(label "EXP_PB12"
-		(at 124.46 212.09 0)
+		(at 123.19 212.09 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10592,7 +10592,7 @@
 		(uuid "802bd740-966d-4b65-b6e9-0cc94dc0e759")
 	)
 	(label "EXP_PA12"
-		(at 124.46 217.17 0)
+		(at 123.19 217.17 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10812,7 +10812,7 @@
 		(uuid "aa25202c-ee00-4f02-b02b-53f68f0a3201")
 	)
 	(label "INT_I2C_SCL"
-		(at 124.46 209.55 0)
+		(at 123.19 209.55 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10852,7 +10852,7 @@
 		(uuid "af444282-428a-48a0-abcb-6422b0e1c192")
 	)
 	(label "SWCLK{slash}BOOT0"
-		(at 124.46 219.71 0)
+		(at 123.19 219.71 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -11683,7 +11683,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 174.371 208.1064 0)
 			(effects
 				(font
@@ -11857,7 +11857,7 @@
 				(justify right)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 215.011 49.3564 0)
 			(effects
 				(font
@@ -12246,7 +12246,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 174.371 143.3364 0)
 			(effects
 				(font
@@ -12695,7 +12695,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 189.611 208.1064 0)
 			(effects
 				(font
@@ -13019,7 +13019,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 124.46 203.2 270)
+		(at 123.19 203.2 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -13028,7 +13028,7 @@
 		(fields_autoplaced yes)
 		(uuid "2b9684dc-6236-4e47-bb81-a34f7a7ae102")
 		(property "Reference" "#PWR033"
-			(at 120.65 203.2 0)
+			(at 119.38 203.2 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13037,7 +13037,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 127.635 203.2 90)
+			(at 126.365 203.2 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13046,7 +13046,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 124.46 203.2 0)
+			(at 123.19 203.2 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13055,7 +13055,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 124.46 203.2 0)
+			(at 123.19 203.2 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13064,7 +13064,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 124.46 203.2 0)
+			(at 123.19 203.2 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14857,7 +14857,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 345.821 46.8164 0)
 			(effects
 				(font
@@ -14958,7 +14958,7 @@
 	)
 	(symbol
 		(lib_id "power:+3.3V")
-		(at 124.46 205.74 270)
+		(at 123.19 205.74 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -14967,7 +14967,7 @@
 		(fields_autoplaced yes)
 		(uuid "527b699b-13a9-455e-8832-2cf276ef8e03")
 		(property "Reference" "#PWR035"
-			(at 120.65 205.74 0)
+			(at 119.38 205.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14976,7 +14976,7 @@
 			)
 		)
 		(property "Value" "+3.3V"
-			(at 127.635 205.74 90)
+			(at 126.365 205.74 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14985,7 +14985,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 124.46 205.74 0)
+			(at 123.19 205.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14994,7 +14994,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 124.46 205.74 0)
+			(at 123.19 205.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15003,7 +15003,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
-			(at 124.46 205.74 0)
+			(at 123.19 205.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15384,7 +15384,7 @@
 				(justify right)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 136.779 131.9064 0)
 			(effects
 				(font
@@ -16919,6 +16919,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C74511"
+			(at 198.12 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "438fa940-faa8-42d4-bb20-dbedb8038d2c")
 		)
@@ -17120,7 +17129,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 189.611 143.3364 0)
 			(effects
 				(font
@@ -18769,7 +18778,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 110.109 131.9064 0)
 			(effects
 				(font
@@ -18882,7 +18891,7 @@
 	)
 	(symbol
 		(lib_id "power:+12V")
-		(at 124.46 200.66 270)
+		(at 123.19 200.66 270)
 		(mirror x)
 		(unit 1)
 		(exclude_from_sim no)
@@ -18892,7 +18901,7 @@
 		(fields_autoplaced yes)
 		(uuid "df7ac1a3-01e7-4bb7-b236-768fc37f1cc3")
 		(property "Reference" "#PWR030"
-			(at 120.65 200.66 0)
+			(at 119.38 200.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18901,7 +18910,7 @@
 			)
 		)
 		(property "Value" "+12V"
-			(at 127.635 200.66 90)
+			(at 126.365 200.66 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18910,7 +18919,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 124.46 200.66 0)
+			(at 123.19 200.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18919,7 +18928,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 124.46 200.66 0)
+			(at 123.19 200.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18928,7 +18937,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+12V\""
-			(at 124.46 200.66 0)
+			(at 123.19 200.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19109,9 +19118,9 @@
 		(at 110.49 209.55 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "e8105eda-2855-4069-a32b-a94644b5f834")
 		(property "Reference" "J8"
@@ -19671,7 +19680,7 @@
 				(justify right)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 121.031 49.3564 0)
 			(effects
 				(font
@@ -20077,7 +20086,7 @@
 				(justify left)
 			)
 		)
-		(property "Rating" "50V, X5R"
+		(property "Rating" "50V, X7R"
 			(at 309.499 46.8164 0)
 			(effects
 				(font
