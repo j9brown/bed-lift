@@ -6,9 +6,10 @@
 	(paper "A4")
 	(title_block
 		(title "Bed Lift Controller")
-		(date "2025-10")
-		(rev "v0.2")
+		(date "2026-01")
+		(rev "v1.0")
 		(company "Brown Studios LLC")
+		(comment 1 "github.com/j9brown/bed-lift")
 	)
 	(lib_symbols
 		(symbol "Connector_Generic:Conn_01x04"

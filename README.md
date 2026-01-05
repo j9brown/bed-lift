@@ -6,7 +6,7 @@ Controls a motorized bed-lift with two synchronized linear actuators for vertica
 
 Refer to the following documents for design synopsis, schematics, and circuit board illustrations.
 
-- [v0.3](./hardware/v0.3/design-and-errata.md): Work in progress to correct errata from v0.2
+- [v1.0](./hardware/v1.0/design-and-errata.md): Fixed errata, improved assignment of pin functions, added span limit hall sensors and buzzer
 - [v0.2](./hardware/v0.2/design-and-errata.md): First feature-complete circuit board
 - [v0.1](./hardware/v0.1/design-and-errata.md): Initial hand-assembled prototype
 

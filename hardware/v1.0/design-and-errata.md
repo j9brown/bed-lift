@@ -1,6 +1,6 @@
 # Bed lift v1.0
 
-**Status: Incomplete, work in progress**
+**Status: Ready for fabrication, not yet tested**
 
 ## Design synopsis
 
@@ -68,8 +68,8 @@ Heat sinks
 
 Actuators
 
-  - 2 Progressive Automations PA-09 linear actuators for the lift
-  - 4 StepperOnline 17N19S1684MB4-200RS stepper motors for the spans
+  - 2 [Progressive Automation PA-09-03-30](https://www.progressiveautomations.com/products/mini-medium-force-linear-actuator) linear actuators for the lift, rated for 4 A at maximum 330 lbs load
+  - 4 [Stepper Online 17E19S1684MB4-300RS](https://www.omc-stepperonline.com/nema-17-external-acme-linear-stepper-motor-1-68a-48mm-stack-screw-lead-8mm-0-31496-lead-length-300mm-17e19s1684mb4-300rs) stepper motors for the spans, rated for 1.68 A per phase
 
 ## Lift position encoders
 
@@ -243,8 +243,8 @@ None yet...
 - Improve switch input debouncing and add ESD protection.
 - Add span limit hall sensor inputs to verify end-of-travel.
 - Add a buzzer to warn of problems.
-- Place additional bulk capacitance closer to every motor driver to distribute the switching current more evenly taking into account DC bias derating for the MLCC capacitors. Simplify power distribution with a 12 V zone on the F.Cu plane for the motor controllers.
-- Increase physical dimensions to allow for additional connectors and larger heat sinks. Keep the B.Cu plane mostly contiguous to improve heat dissipation except where needed for power traces. Use the In1.Cu plane exclusively for ground. Use the In2.Cu plane for ground and low current signal routing. Fill F.Cu with copper and via stitch the ground planes.
+- Place additional bulk capacitance closer to every motor driver to distribute the switching current more evenly taking into account DC bias derating for the MLCC capacitors.
+- Increase physical dimensions to allow for additional connectors and larger heat sinks. Keep the B.Cu plane mostly contiguous under the motor drivers to improve heat dissipation by moving the signals to In2.Cu in that location.
 - Use plated mounting holes in each corner to prevent shorting to the 12 V zone.
 - Avoid burying fixed voltage signals under chips in case they need to be bodged like last time.
 

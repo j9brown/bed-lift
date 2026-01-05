@@ -1,6 +1,6 @@
 # Bed lift v0.2 (OBSOLETE)
 
-**Status: Superseded by v0.3, see [errata](#errata)**
+**Status: Superseded by v1.0, see [errata](#errata)**
 
 ## Design synopsis
 

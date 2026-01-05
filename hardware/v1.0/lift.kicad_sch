@@ -6,9 +6,10 @@
 	(paper "A4")
 	(title_block
 		(title "Bed Lift Controller")
-		(date "2025-10")
-		(rev "v0.2.1")
+		(date "2026-01")
+		(rev "v1.0")
 		(company "Brown Studios LLC")
+		(comment 1 "github.com/j9brown/bed-lift")
 	)
 	(lib_symbols
 		(symbol "Connector_Generic:Conn_02x03_Top_Bottom"
@@ -1349,6 +1350,131 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "power:+5V"
+			(power)
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "#PWR"
+				(at 0 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Value" "+5V"
+				(at 0 3.556 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Power symbol creates a global label with name \"+5V\""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "global power"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "+5V_0_1"
+				(polyline
+					(pts
+						(xy -0.762 1.27) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0.762 1.27)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "+5V_1_1"
+				(pin power_in line
+					(at 0 0 90)
+					(length 0)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:GND"
 			(power)
 			(pin_numbers
@@ -2386,17 +2512,6 @@
 		)
 		(uuid "b42950c9-e8d5-43f4-9b4f-654aff76d53b")
 	)
-	(hierarchical_label "VHALL"
-		(shape passive)
-		(at 151.13 124.46 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "c24d4155-0119-4a23-9462-80caab3c073f")
-	)
 	(netclass_flag ""
 		(length 2.54)
 		(shape round)
@@ -2411,30 +2526,6 @@
 		(uuid "243fc9e2-8cb4-480d-b0b4-8718969dbe63")
 		(property "Netclass" "Power-4A"
 			(at 201.3585 76.2 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(netclass_flag ""
-		(length 2.54)
-		(shape round)
-		(at 153.67 124.46 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "665c7999-cb70-41b4-9a50-19239257d593")
-		(property "Netclass" "Power"
-			(at 154.3685 121.92 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2538,6 +2629,77 @@
 				)
 				(justify left)
 				(hide yes)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 151.13 124.46 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "1762b237-32ec-4949-b170-fd7b83d743d1")
+		(property "Reference" "#PWR045"
+			(at 154.94 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 147.9551 124.46 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 151.13 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 151.13 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 151.13 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "22c216f7-f1c4-4b8e-9e0e-e707e43cb247")
+		)
+		(instances
+			(project "bed-lift"
+				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
+					(reference "#PWR045")
+					(unit 1)
+				)
+				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
+					(reference "#PWR055")
+					(unit 1)
+				)
 			)
 		)
 	)
@@ -2863,7 +3025,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "3669e6f7-63dc-48f6-9a5c-fde9ff797940")
-		(property "Reference" "#PWR044"
+		(property "Reference" "#PWR042"
 			(at 209.55 88.9 0)
 			(effects
 				(font
@@ -2914,11 +3076,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR044")
+					(reference "#PWR042")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR053")
+					(reference "#PWR052")
 					(unit 1)
 				)
 			)
@@ -3145,7 +3307,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "42e6ad41-8183-48eb-9741-256818b233b0")
-		(property "Reference" "#PWR048"
+		(property "Reference" "#PWR047"
 			(at 173.99 146.05 0)
 			(effects
 				(font
@@ -3195,7 +3357,7 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR048")
+					(reference "#PWR047")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
@@ -3574,7 +3736,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6a1181e3-1f8b-46b8-911b-0142242dff43")
-		(property "Reference" "#PWR041"
+		(property "Reference" "#PWR039"
 			(at 105.41 63.5 0)
 			(effects
 				(font
@@ -3624,11 +3786,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR041")
+					(reference "#PWR039")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR050")
+					(reference "#PWR049")
 					(unit 1)
 				)
 			)
@@ -3644,7 +3806,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7574556d-929b-4836-ae99-fbe6dee27336")
-		(property "Reference" "#PWR040"
+		(property "Reference" "#PWR038"
 			(at 93.98 45.72 0)
 			(effects
 				(font
@@ -3695,11 +3857,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR040")
+					(reference "#PWR038")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR049")
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)
@@ -3715,7 +3877,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7caf58bc-fc4f-4bc4-ba39-fa873ef64aa2")
-		(property "Reference" "#PWR047"
+		(property "Reference" "#PWR046"
 			(at 114.3 142.24 0)
 			(effects
 				(font
@@ -3765,7 +3927,7 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR047")
+					(reference "#PWR046")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
@@ -3784,7 +3946,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "8274fdf0-13b2-46b9-9624-fd3785cef942")
-		(property "Reference" "#PWR045"
+		(property "Reference" "#PWR043"
 			(at 161.29 91.44 0)
 			(effects
 				(font
@@ -3835,11 +3997,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR045")
+					(reference "#PWR043")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR054")
+					(reference "#PWR053")
 					(unit 1)
 				)
 			)
@@ -3855,7 +4017,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "96f6c26a-23bc-41c5-80cf-f67bdeb0dd6a")
-		(property "Reference" "#PWR046"
+		(property "Reference" "#PWR044"
 			(at 209.55 91.44 0)
 			(effects
 				(font
@@ -3906,11 +4068,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR046")
+					(reference "#PWR044")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR055")
+					(reference "#PWR054")
 					(unit 1)
 				)
 			)
@@ -3926,7 +4088,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9c78f7b4-2b7b-4842-8562-b57edf785bfb")
-		(property "Reference" "#PWR043"
+		(property "Reference" "#PWR041"
 			(at 209.55 86.36 0)
 			(effects
 				(font
@@ -3977,11 +4139,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR043")
+					(reference "#PWR041")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR052")
+					(reference "#PWR051")
 					(unit 1)
 				)
 			)
@@ -4089,7 +4251,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "a3d588da-d6cf-4bc6-9346-c8ed5adedce4")
-		(property "Reference" "#PWR042"
+		(property "Reference" "#PWR040"
 			(at 161.29 60.96 0)
 			(effects
 				(font
@@ -4140,11 +4302,11 @@
 		(instances
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/73779cb4-e276-4cb8-abc0-7835080fddfe"
-					(reference "#PWR042")
+					(reference "#PWR040")
 					(unit 1)
 				)
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e/b7a1b7cc-1f28-44b5-9bcf-53ef9e40d7ff"
-					(reference "#PWR051")
+					(reference "#PWR050")
 					(unit 1)
 				)
 			)

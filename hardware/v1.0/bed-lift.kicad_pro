@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 2.7,
-          "height": 4.7,
-          "width": 4.7
+          "drill": 1.8,
+          "height": 2.3,
+          "width": 2.3
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -58,7 +58,40 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "lib_footprint_mismatch|129455113|83500000|093df8a0-cff7-4964-89fc-6fb1197b1efd|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|153455113|83500000|1d4fa1b4-3816-4467-b04a-21ece60fb016|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|222500000|62750000|0646fac5-8d27-4c94-9666-1611a063cdf2|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|222500000|92750000|1546843b-c6a8-4a87-bcfa-e85689146e0c|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|30500000|92750000|07dc27bc-fcc8-41dd-9e91-0ad80c9522a6|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|36500000|56750000|789e3fa1-1fc2-4908-9d4d-19ff16c0f0f8|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|74579215|78250000|2ec40721-c3b4-4c1a-81db-b1f191d45a38|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "starved_thermal|65335001|59790000|7373b7fa-91f0-4fe3-b680-b2528337439f|88667a4d-1f2b-43fc-a177-d8838d80d37d|F.Cu",
+          ""
+        ]
+      ],
       "meta": {
         "version": 2
       },
@@ -125,7 +158,7 @@
         "max_error": 0.005,
         "min_clearance": 0.1,
         "min_connection": 0.1,
-        "min_copper_edge_clearance": 0.15,
+        "min_copper_edge_clearance": 0.4,
         "min_groove_width": 0.0,
         "min_hole_clearance": 0.2,
         "min_hole_to_hole": 0.5,
@@ -191,8 +224,6 @@
         0.2,
         0.3,
         0.4,
-        0.6,
-        0.8,
         1.0,
         1.5,
         2.5,
@@ -520,24 +551,13 @@
         "wire_width": 12
       },
       {
-        "bus_width": 24,
-        "clearance": 0.2,
-        "line_style": 0,
-        "name": "Power-10A",
-        "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 3,
-        "schematic_color": "rgb(0, 255, 0)",
-        "track_width": 5.0,
-        "wire_width": 24
-      },
-      {
         "bus_width": 18,
         "clearance": 0.2,
         "line_style": 0,
         "name": "Power-2A",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 1,
-        "schematic_color": "rgb(255, 153, 0)",
+        "schematic_color": "rgb(221, 133, 0)",
         "track_width": 1.0,
         "wire_width": 18
       },
@@ -548,7 +568,7 @@
         "name": "Power-4A",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 2,
-        "schematic_color": "rgb(255, 255, 0)",
+        "schematic_color": "rgb(194, 194, 0)",
         "track_width": 2.5,
         "wire_width": 18
       }
@@ -739,7 +759,24 @@
         "Power"
       ]
     },
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Power",
+        "pattern": "GND"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+3.3V"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+5V"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+12V"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {
