@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 1.8,
-          "height": 2.3,
-          "width": 2.3
+          "drill": 0.8,
+          "height": 1.6,
+          "width": 1.6
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -48,7 +48,7 @@
         "silk_text_thickness": 0.1,
         "silk_text_upright": false,
         "zones": {
-          "min_clearance": 0.0
+          "min_clearance": 0.5
         }
       },
       "diff_pair_dimensions": [
@@ -81,14 +81,6 @@
         ],
         [
           "lib_footprint_mismatch|36500000|56750000|789e3fa1-1fc2-4908-9d4d-19ff16c0f0f8|00000000-0000-0000-0000-000000000000",
-          ""
-        ],
-        [
-          "lib_footprint_mismatch|74579215|78250000|2ec40721-c3b4-4c1a-81db-b1f191d45a38|00000000-0000-0000-0000-000000000000",
-          ""
-        ],
-        [
-          "starved_thermal|65335001|59790000|7373b7fa-91f0-4fe3-b680-b2528337439f|88667a4d-1f2b-43fc-a177-d8838d80d37d|F.Cu",
           ""
         ]
       ],
@@ -543,9 +535,20 @@
         "bus_width": 12,
         "clearance": 0.2,
         "line_style": 0,
-        "name": "Power",
+        "name": "EXT I2C Isolation",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 0,
+        "schematic_color": "rgb(0, 194, 0)",
+        "track_width": 0.2,
+        "wire_width": 12
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "line_style": 0,
+        "name": "Power",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
         "schematic_color": "rgb(255, 0, 0)",
         "track_width": 0.4,
         "wire_width": 12
@@ -556,7 +559,7 @@
         "line_style": 0,
         "name": "Power-2A",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 1,
+        "priority": 2,
         "schematic_color": "rgb(221, 133, 0)",
         "track_width": 1.0,
         "wire_width": 18
@@ -567,7 +570,7 @@
         "line_style": 0,
         "name": "Power-4A",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
-        "priority": 2,
+        "priority": 3,
         "schematic_color": "rgb(194, 194, 0)",
         "track_width": 2.5,
         "wire_width": 18
@@ -588,10 +591,16 @@
         "Power"
       ],
       "/BUS_3V3": [
-        "Power"
+        "EXT I2C Isolation"
       ],
       "/BUS_GND": [
-        "Power"
+        "EXT I2C Isolation"
+      ],
+      "/BUS_SCL": [
+        "EXT I2C Isolation"
+      ],
+      "/BUS_SDA": [
+        "EXT I2C Isolation"
       ],
       "/VHALL": [
         "Power"
@@ -894,10 +903,10 @@
           "show": false
         },
         {
-          "group_by": false,
+          "group_by": true,
           "label": "Rating",
           "name": "Rating",
-          "show": false
+          "show": true
         },
         {
           "group_by": false,

@@ -6,12 +6,22 @@
 
 The controller has the following major components:
 
-- A [STM32C051C8T6](https://www.st.com/resource/en/datasheet/stm32c051c8.pdf) with 64 KB flash and 12 KB RAM controls the actuators. It is programmed with SWD using a STDC14 connector. The timer peripherals are used extensively for motor control and feedback.
-- A [ISO1640](https://www.ti.com/lit/ds/symlink/iso1640.pdf) isolates the I2C bus to prevent ground loops through the `QWIIC` connector because the driver has a separate power supply.
+- [STM32C051C8T6](https://www.st.com/resource/en/datasheet/stm32c051c8.pdf) with 64 KB flash and 12 KB RAM controls the actuators. It is programmed with SWD using a STDC14 connector. The timer peripherals are used extensively for motor control and feedback.
+- [ISO1640](https://www.ti.com/lit/ds/symlink/iso1640.pdf) isolates the I2C bus to prevent ground loops through the `EXT I2C` connector because the driver has a separate power supply.
 - Four [DRV8434S](https://www.ti.com/lit/ds/symlink/drv8434s.pdf) stepper motor drivers operate the four motors that extend and retract the side spans of the bed.
 - Two [DRV8874](https://www.ti.com/lit/ds/slvsf66a/slvsf66a.pdf) motor drivers operate the two linear actuators that raise and lower the bed.
+- [LP2985-33](http://www.ti.com/lit/ds/symlink/lp2985.pdf) LDO powers the logic circuits at 3.3 V
+- [LP2985-50](http://www.ti.com/lit/ds/symlink/lp2985.pdf) LDO powers the hall sensors at 5.0 V
+- [PS1240P02BT](https://product.tdk.com/en/system/files/dam/doc/product/sw_piezo/sw_piezo/piezo-buzzer/catalog/piezoelectronic_buzzer_ps_en.pdf) buzzer provides audible feedback
+- Circuit protection elements
+  - Supply: TVS
+  - Actuators: overcurrent, stall-detection, open-load, short-circuit
+  - Switch inputs: ESD diodes
+  - External I2C bus: galvanic isolation
 
-The device receives end-user control inputs from a momentary rocker switch attached to the `CONTROL` input and it provides feedback on its progress with an RGB LED indicator and piezo buzzer. To synchronize the motors and move the bed lift into the correct pose, the device receives position feedback from the `LIFT` actuator hall sensors, `LIFT LIMIT` switches, `SPAN LIMIT` hall sensors, and stepper motor driver stall detection. It can also be monitored and controlled remotely by an external I2C host via the `QWIIC` connector.
+The device receives user control input from a momentary rocker switch attached to the `CONTROL` input and it provides feedback on its progress with an RGB LED indicator and piezo buzzer. To synchronize the motors and move the bed lift into the correct pose, the device receives position feedback from the `LIFT` actuator hall sensors, `LIFT LIMIT` switches, `SPAN LIMIT` hall sensors, and stepper motor driver stall detection. It can also be monitored and controlled remotely by an external I2C host via the `EXT I2C` connector.
+
+The `EXPANSION` and `INT I2C` interfaces expose additional signals for future use.
 
 The circuit board requires a 12 V DC nominal supply protected by a 10 A external fuse.
 
@@ -22,7 +32,7 @@ The schematics include the BOM and metadata for the JLCPCB fabrication toolkit p
 [Schematics PDF](bed-lift.pdf)
 
 <details>
-<summary>PCB front and back</summary>
+<summary>PCB front and back (expand to view)</summary>
 
 ### PCB front
 ![PCB front](bed-lift-front.png)
@@ -31,6 +41,22 @@ The schematics include the BOM and metadata for the JLCPCB fabrication toolkit p
 ![PCB back](bed-lift-back.png)
 
 </details>
+
+## Fabrication
+
+Use the `JLCPCB fabrication toolkit` plug-in to generate files for JLCPCB.
+
+Fabrication parameters:
+
+- Material: 4 layers, FR4 TG155, ENIG, 1 oz outer copper, 0.5 oz inner copper
+- Via covering: tented (default)
+- Min via hole size: 0.3 mm (default)
+- Board outline tolerance: 0.2 mm (default)
+- Assembly side: top
+- Tooling holes: by customer
+- Parts selection: by customer
+- Solder paste: high temp (default)
+
 
 ## Additional materials
 
@@ -68,7 +94,7 @@ Heat sinks
 
 Actuators
 
-  - 2 [Progressive Automation PA-09-03-30](https://www.progressiveautomations.com/products/mini-medium-force-linear-actuator) linear actuators for the lift, rated for 4 A at maximum 330 lbs load
+  - 2 [Progressive Automation PA-09-03-30](https://www.progressiveautomations.com/products/mini-medium-force-linear-actuator) linear actuators for the lift, rated for 4 A at maximum 330 lbs load, hall sensor produces 660 pulses per inch of travel
   - 4 [Stepper Online 17E19S1684MB4-300RS](https://www.omc-stepperonline.com/nema-17-external-acme-linear-stepper-motor-1-68a-48mm-stack-screw-lead-8mm-0-31496-lead-length-300mm-17e19s1684mb4-300rs) stepper motors for the spans, rated for 1.68 A per phase
 
 ## Lift position encoders
@@ -110,7 +136,7 @@ Although end-of-travel can be determined by observing stepper motor stalls, the 
 
 ### Debug
 
-- NRST on PF2: Reset
+- NRST on PF2: RESET
 - SWDIO on PA13: SWDIO, serial wire data
 - SWCLK/BOOT0 on PA14: SWCLK/BOOT0, serial wire clock
 
@@ -144,8 +170,8 @@ Although end-of-travel can be determined by observing stepper motor stalls, the 
 - TIM1_CH2 on PA1: LIFT1_IN2, PWM output
 - TIM1_CH3 on PA2: LIFT2_IN1, PWM output
 - TIM1_CH4 on PA3: LIFT2_IN2, PWM output
-- TIM1_BKIN2 on PC14: LIFT_FAULT, trigger TIM1 break input 2
-- GPIO on PC13: LIFT_SLEEP
+- TIM1_BKIN2 on PC14: LIFT_FAULT, trigger TIM1 break input 2, active low
+- GPIO on PC13: LIFT_SLEEP, active low
 
 The TIM1 break function prevents runaway motor operation when triggered by a system fault, debug mode, or TIM1_BKIN2 active.  Configured to stop both lift actuators when either one encounters a fault.
 
@@ -154,25 +180,25 @@ The TIM1 break function prevents runaway motor operation when triggered by a sys
 
 #### Rotary encoders (digital hall sensors)
 
-- GPIO on PB0 (EXTI0): LIFT1_HALL1, interrupt input
-- GPIO on PB1 (EXTI1): LIFT1_HALL2, interrupt input
-- GPIO on PB2 (EXTI2): LIFT2_HALL1, interrupt input
-- GPIO on PB3 (EXTI3): LIFT2_HALL2, interrupt input
+- GPIO on PB0 (EXTI0): LIFT1_HALL1, interrupt input, active high
+- GPIO on PB1 (EXTI1): LIFT1_HALL2, interrupt input, active high
+- GPIO on PB2 (EXTI2): LIFT2_HALL1, interrupt input, active high
+- GPIO on PB3 (EXTI3): LIFT2_HALL2, interrupt input, active high
 
 Quadrature decoding triggered by EXTI0-1 and EXTI2-3 interrupt with high-priority and not shared with any other I/O pins. We could have used TIM2 and TIM3 to decode both quadrature signals but we need one of those peripherals for the indicator PWM.
 
 #### Position encoders (limit switches)
 
-- GPIO on PF0: LIFT_LIMIT_A
-- GPIO on PF1: LIFT_LIMIT_B
+- GPIO on PF0: LIFT_LIMIT_A, active low
+- GPIO on PF1: LIFT_LIMIT_B, active low
 
 ### Span actuators
 
 #### Driver interface
 
-- GPIO on PB4: SPAN_SLEEP
-- GPIO (or TIM16_BKIN) on PB5: SPAN_FAULT
-- TIM16_CH1 on PB8: SPAN_STEP
+- GPIO on PB4: SPAN_SLEEP, active low
+- GPIO (or TIM16_BKIN) on PB5: SPAN_FAULT, active low
+- TIM16_CH1 on PB8: SPAN_STEP, active high
 
 The drivers are connected to the SPI bus in a daisy-chain. All drivers receive the same step pulse and the direction is specified via SPI.
 
@@ -183,50 +209,49 @@ The TIM16 break function prevents runaway motor operation when triggered by a sy
 
 #### Position encoders (digital hall sensors)
 
-- GPIO on PD0: SPAN1_LIMIT_A
-- GPIO on PD1: SPAN1_LIMIT_B
-- GPIO on PD2: SPAN2_LIMIT_A
-- GPIO on PD3: SPAN2_LIMIT_B
+- GPIO on PD0: SPAN1_LIMIT_A, active low
+- GPIO on PD1: SPAN1_LIMIT_B, active low
+- GPIO on PD2: SPAN2_LIMIT_A, active low
+- GPIO on PD3: SPAN2_LIMIT_B, active low
 
 ### Indicator LEDs
 
-- TIM3_CH1 on PC6: LED_R, PWM output
-- TIM3_CH2 on PC7: LED_G, PWM output
-- TIM3_CH3 on PC15: LED_B, PWM output
-- TIM3_CH4 on PA8: EXP_PA8, PWM output
+- TIM3_CH1 on PC6: LED_STATUS_R, PWM output, active high
+- TIM3_CH2 on PC7: LED_STATUS_G, PWM output, active high
+- TIM3_CH3 on PC15: LED_STATUS_B, PWM output, active high
+- TIM3_CH4 on PA8: LED_POWER, PWM output, active low
 
 ### Control buttons
 
-- GPIO on PB14 (EXTI14): CTRL_LOWER, interrupt input
-- GPIO on PB15 (EXTI15): CTRL_RAISE, interrupt input
+- GPIO on PB14 (EXTI14): CTRL_LOWER, interrupt input, active low
+- GPIO on PB15 (EXTI15): CTRL_RAISE, interrupt input, active low
 
 ### 5 V LDO for hall sensors
 
-- GPIO on PF3: 5V_EN
+- GPIO on PF3: 5V_EN, active high
 
 The lift hall sensors require 5 V and do not operate reliably on 3.3 V.
 
-The span hall sensors operate on 2.7 V to 24 V.  Use the 5 V LDO instead of 3.3 V so they can be easily turned off to save power together with the lift hall sensors.
+The span hall sensors operate on 2.7 V to 24 V.  This design uses the 5 V LDO instead of 3.3 V so the sensors can be easily turned off to save power together with the lift hall sensors.
 
 ### Buzzer
 
-- TIM17_CH1 on PB9: BUZZ
+- TIM17_CH1 on PB9: SOUND, active high
 
 ### Unused pins available for expansion
 
-- PA8 (TIM3_CH4, TIM14_CH1, USART2_TX)
 - PA11 (ADC_IN11)
 - PA12 (ADC_IN12)
-- PA15 (TIM2_CH1, USART2_RX)
+- PA15 (TIM2_CH1)
 - PB12 (ADC_IN22, TIM1_BKIN)
 - PB13 (---)
 
 ### [System bootloader](https://www.st.com/resource/en/application_note/an2606-stm32-microcontroller-system-memory-boot-mode-stmicroelectronics.pdf) configured pins
 
-- Can access system bootloader via the console and external I2C ports
-- Inputs: PA2, PA9
+- Can access system bootloader via the console UART and external I2C ports
+- Pull-up inputs: PA2, PA9
 - Pull-up outputs: PA3, PA10, PB6, PB7, PB10, PB11
-- Pull-down outpus: PA4, PA5, PA6, PA7, PB12, PB13, PB14, PB15
+- Pull-down outputs: PA4, PA5, PA6, PA7, PB12, PB13, PB14, PB15
 
 ## Errata
 
@@ -236,20 +261,22 @@ None yet...
 
 ### Major changes since v0.2
 
-- Use an MCU variant with more pins and flash, expose unused pins to an expansion port, use STDC14 connector for debugging instead of TagConnect.
+- Use an MCU variant with more pins and flash, expose unused pins to an expansion port.
+- Use STDC14 connector for debugging instead of TagConnect to improve accessibility.
 - Assign PWM capable outputs to motor driver inputs, drive the step signal with PWM, attach fault signals to break inputs.
 - Correct the lift motor connector pins, provide 5 V for its hall sensors, attach hall sensor signals to EXTI0-4 lines for higher priority interrupt handling.
 - Drive DRV8434S VREF with 3.3 V as recommended in the datasheet and provide missing SPI SCS signal.
 - Improve switch input debouncing and add ESD protection.
 - Add span limit hall sensor inputs to verify end-of-travel.
-- Add a buzzer to warn of problems.
+- Add a buzzer for audible feedback.
 - Place additional bulk capacitance closer to every motor driver to distribute the switching current more evenly taking into account DC bias derating for the MLCC capacitors.
-- Increase physical dimensions to allow for additional connectors and larger heat sinks. Keep the B.Cu plane mostly contiguous under the motor drivers to improve heat dissipation by moving the signals to In2.Cu in that location.
-- Use plated mounting holes in each corner to prevent shorting to the 12 V zone.
+- Increase physical dimensions to allow for additional connectors and larger heat sinks. Keep the B.Cu plane mostly contiguous under the motor drivers to improve heat dissipation.
 - Avoid burying fixed voltage signals under chips in case they need to be bodged like last time.
 
 ### Remarks
 
 - Considered replacing the 3.3 V LDO with a buck converter but the idle current is already so low (should be less than 5 mA) that it's not worth the complexity.
-- The RC filter for the lift hall sensors does not appear to be strictly necessary but seems prudent given prior observations of sensor noise (which appears to have been resolved by increasing the supply to 5 V).
+- The RC filter for the lift hall sensors does not appear to be strictly necessary but it seems prudent given prior observations of sensor noise (which appears to have been resolved by increasing the supply to 5 V).  Set the filter cutoff below 20 kHz to filter out PWM noise.  The v0.2 design had the same filter and it worked fine and the signals looked clean so leaving it in.  Added ESD protection to protect the input pins.
 - The extra bulk capacitance may increase leakage current. If it becomes a problem, some capacitors can always be removed.
+- The via stitching pattern is generated with the `kicad-action-scripts` plug-in based on a 2 mm gap, 0.5 mm diameter, 0.3 mm hole.
+- The schematics are plotted with dark theme `Arcana`.
