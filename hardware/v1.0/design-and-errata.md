@@ -6,12 +6,22 @@
 
 The controller has the following major components:
 
-- A [STM32C051C8T6](https://www.st.com/resource/en/datasheet/stm32c051c8.pdf) with 64 KB flash and 12 KB RAM controls the actuators. It is programmed with SWD using a STDC14 connector. The timer peripherals are used extensively for motor control and feedback.
-- A [ISO1640](https://www.ti.com/lit/ds/symlink/iso1640.pdf) isolates the I2C bus to prevent ground loops through the `QWIIC` connector because the driver has a separate power supply.
+- [STM32C051C8T6](https://www.st.com/resource/en/datasheet/stm32c051c8.pdf) with 64 KB flash and 12 KB RAM controls the actuators. It is programmed with SWD using a STDC14 connector. The timer peripherals are used extensively for motor control and feedback.
+- [ISO1640](https://www.ti.com/lit/ds/symlink/iso1640.pdf) isolates the I2C bus to prevent ground loops through the `QWIIC` connector because the driver has a separate power supply.
 - Four [DRV8434S](https://www.ti.com/lit/ds/symlink/drv8434s.pdf) stepper motor drivers operate the four motors that extend and retract the side spans of the bed.
 - Two [DRV8874](https://www.ti.com/lit/ds/slvsf66a/slvsf66a.pdf) motor drivers operate the two linear actuators that raise and lower the bed.
+- [LP2985-33](http://www.ti.com/lit/ds/symlink/lp2985.pdf) LDO powers the logic circuits at 3.3 V
+- [LP2985-50](http://www.ti.com/lit/ds/symlink/lp2985.pdf) LDO powers the hall sensors at 5.0 V
+- [PS1240P02BT](https://product.tdk.com/en/system/files/dam/doc/product/sw_piezo/sw_piezo/piezo-buzzer/catalog/piezoelectronic_buzzer_ps_en.pdf) buzzer provides audible feedback
+- Circuit protection elements
+  - Supply: TVS
+  - Actuators: overcurrent, stall-detection, open-load, short-circuit
+  - Switch inputs: ESD diodes
+  - I2C bus: galvanic isolation
 
-The device receives end-user control inputs from a momentary rocker switch attached to the `CONTROL` input and it provides feedback on its progress with an RGB LED indicator and piezo buzzer. To synchronize the motors and move the bed lift into the correct pose, the device receives position feedback from the `LIFT` actuator hall sensors, `LIFT LIMIT` switches, `SPAN LIMIT` hall sensors, and stepper motor driver stall detection. It can also be monitored and controlled remotely by an external I2C host via the `QWIIC` connector.
+The device receives end-user control inputs from a momentary rocker switch attached to the `CONTROL` input and it provides feedback on its progress with an RGB LED indicator and piezo buzzer. To synchronize the motors and move the bed lift into the correct pose, the device receives position feedback from the `LIFT` actuator hall sensors, `LIFT LIMIT` switches, `SPAN LIMIT` hall sensors, and stepper motor driver stall detection. It can also be monitored and controlled remotely by an external I2C host via the `EXT I2C` connector.
+
+The `EXPANSION` and `INT I2C` interfaces expose additional signals for future use.
 
 The circuit board requires a 12 V DC nominal supply protected by a 10 A external fuse.
 
@@ -110,7 +120,7 @@ Although end-of-travel can be determined by observing stepper motor stalls, the 
 
 ### Debug
 
-- NRST on PF2: Reset
+- NRST on PF2: RESET
 - SWDIO on PA13: SWDIO, serial wire data
 - SWCLK/BOOT0 on PA14: SWCLK/BOOT0, serial wire clock
 
@@ -190,10 +200,10 @@ The TIM16 break function prevents runaway motor operation when triggered by a sy
 
 ### Indicator LEDs
 
-- TIM3_CH1 on PC6: LED_R, PWM output
-- TIM3_CH2 on PC7: LED_G, PWM output
-- TIM3_CH3 on PC15: LED_B, PWM output
-- TIM3_CH4 on PA8: EXP_PA8, PWM output
+- TIM3_CH1 on PC6: LED_STATUS_R, PWM output, active high
+- TIM3_CH2 on PC7: LED_STATUS_G, PWM output, active high
+- TIM3_CH3 on PC15: LED_STATUS_B, PWM output, active high
+- TIM3_CH4 on PA8: LED_POWER, PWM output, active low
 
 ### Control buttons
 
@@ -214,19 +224,18 @@ The span hall sensors operate on 2.7 V to 24 V.  Use the 5 V LDO instead of 3.3 
 
 ### Unused pins available for expansion
 
-- PA8 (TIM3_CH4, TIM14_CH1, USART2_TX)
 - PA11 (ADC_IN11)
 - PA12 (ADC_IN12)
-- PA15 (TIM2_CH1, USART2_RX)
+- PA15 (TIM2_CH1)
 - PB12 (ADC_IN22, TIM1_BKIN)
 - PB13 (---)
 
 ### [System bootloader](https://www.st.com/resource/en/application_note/an2606-stm32-microcontroller-system-memory-boot-mode-stmicroelectronics.pdf) configured pins
 
-- Can access system bootloader via the console and external I2C ports
-- Inputs: PA2, PA9
+- Can access system bootloader via the console UART and external I2C ports
+- Pull-up inputs: PA2, PA9
 - Pull-up outputs: PA3, PA10, PB6, PB7, PB10, PB11
-- Pull-down outpus: PA4, PA5, PA6, PA7, PB12, PB13, PB14, PB15
+- Pull-down outputs: PA4, PA5, PA6, PA7, PB12, PB13, PB14, PB15
 
 ## Errata
 
@@ -244,7 +253,7 @@ None yet...
 - Add span limit hall sensor inputs to verify end-of-travel.
 - Add a buzzer to warn of problems.
 - Place additional bulk capacitance closer to every motor driver to distribute the switching current more evenly taking into account DC bias derating for the MLCC capacitors.
-- Increase physical dimensions to allow for additional connectors and larger heat sinks. Keep the B.Cu plane mostly contiguous under the motor drivers to improve heat dissipation by moving the signals to In2.Cu in that location.
+- Increase physical dimensions to allow for additional connectors and larger heat sinks. Keep the B.Cu plane mostly contiguous under the motor drivers to improve heat dissipation.
 - Use plated mounting holes in each corner to prevent shorting to the 12 V zone.
 - Avoid burying fixed voltage signals under chips in case they need to be bodged like last time.
 
