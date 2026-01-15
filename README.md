@@ -26,25 +26,53 @@ The bed has limited load bearing capacity while raised so it must be lowered whe
 
 Feel free to contact me for advice if you are interested in building a bed like mine (and be prepared for a challenge)!
 
+[Video tour of the v0.2 prototype](https://vimeo.com/1154513482/b7c7d3c8f7)
+
 <details>
-<summary>Photos</summary>
+<summary>Photos of v0.2 prototype</summary>
 
-### Bed lift prototype in lowered position
-![Bed lift in lowered position](./docs/bed-lift-prototype-lowered.jpg)
+### Bed lift in lowered position viewed from outside
+![Bed lift in lowered position viewed from outside](./docs/v0.2/outside-lowered.jpg)
 
-### Bed lift prototype in raised position
-![Bed lift in raised position](./docs/bed-lift-prototype-raised.jpg)
+### Bed lift in raised position viewed from outside
+![Bed lift in raised position viewed from outside](./docs/v0.2/outside-raised.jpg)
+
+### Bed lift in lowered position viewed from inside
+![Bed lift in lowered position viewed from inside](./docs/v0.2/inside-lowered.jpg)
+
+### Bed lift in raised position viewed from inside
+![Bed lift in raised position viewed from inside](./docs/v0.2/inside-raised.jpg)
+
+### Bed lift controls
+![Bed lift controls](./docs/v0.2/controls.jpg)
+
+### Bed lift driver
+![Bed lift driver](./docs/v0.2/driver.jpg)
+
+### Bed lift position encoder
+![Bed lift driver](./docs/v0.2/lift-limit.jpg)
+
+</details>
+
+<details>
+<summary>Photos of v0.1 prototype</summary>
+
+### Bed lift in lowered position
+![Bed lift in lowered position](./docs/v0.1/bed-lift-prototype-lowered.jpg)
+
+### Bed lift in raised position
+![Bed lift in raised position](./docs/v0.1/bed-lift-prototype-raised.jpg)
 
 </details>
 
 <details>
 <summary>CAD model</summary>
 
-### Bed lift CAD model in lowered position
-![Bed lift in lowered position](./docs/bed-lift-model-lowered.png)
+### Bed lift in lowered position
+![Bed lift in lowered position](./docs/model/bed-lift-model-lowered.png)
 
-### Bed lift CAD model in raised position
-![Bed lift in raised position](./docs/bed-lift-model-raised.png)
+### Bed lift in raised position
+![Bed lift in raised position](./docs/model/bed-lift-model-raised.png)
 
 </details>
 
