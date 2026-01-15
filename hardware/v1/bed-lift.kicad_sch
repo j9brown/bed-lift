@@ -6132,7 +6132,7 @@
 		)
 		(uuid fa5cbcec-368e-40d7-9ad2-be58bcfc4395)
 	)
-	(text "Programmed via SWD with STLINK-V3 and an STDC14 cable\nCan also access the system bootloader over I2C or UART by pulling BOOT0 low during RESET\nUnused pins are exposed via an expansion port including an internal I2C interface (QWIIC)"
+	(text "Programmed via SWD with STLINK-V3 and an STDC14 cable\nCan also access the system bootloader over I2C or UART by pulling BOOT0 high during RESET\nUnused pins are exposed via an expansion port including an internal I2C interface (QWIIC)"
 		(exclude_from_sim no)
 		(at 15.24 107.95 0)
 		(effects

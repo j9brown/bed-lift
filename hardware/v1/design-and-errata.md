@@ -57,7 +57,6 @@ Fabrication parameters:
 - Parts selection: by customer
 - Solder paste: high temp (default)
 
-
 ## Additional materials
 
 Control panel switches
@@ -137,8 +136,8 @@ Although end-of-travel can be determined by observing stepper motor stalls, the 
 ### Debug
 
 - NRST on PF2: RESET
-- SWDIO on PA13: SWDIO, serial wire data
-- SWCLK/BOOT0 on PA14: SWCLK/BOOT0, serial wire clock
+- SWDIO on PA13: SWDIO, serial wire data, internal pull-up activated on reset
+- SWCLK/BOOT0 on PA14: SWCLK/BOOT0, serial wire clock, internal pull-down activated on reset
 
 ### Console
 
@@ -248,7 +247,7 @@ The span hall sensors operate on 2.7 V to 24 V.  This design uses the 5 V LDO in
 
 ### [System bootloader](https://www.st.com/resource/en/application_note/an2606-stm32-microcontroller-system-memory-boot-mode-stmicroelectronics.pdf) configured pins
 
-- Can access system bootloader via the console UART and external I2C ports
+- Can access system bootloader via the console UART and external I2C ports by pulling BOOT0 high on reset
 - Pull-up inputs: PA2, PA9
 - Pull-up outputs: PA3, PA10, PB6, PB7, PB10, PB11
 - Pull-down outputs: PA4, PA5, PA6, PA7, PB12, PB13, PB14, PB15
