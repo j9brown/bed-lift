@@ -874,8 +874,8 @@
         },
         {
           "group_by": false,
-          "label": "LCSC_Alternative",
-          "name": "LCSC_Alternative",
+          "label": "LCSC Alternative",
+          "name": "LCSC Alternative",
           "show": false
         },
         {
@@ -916,8 +916,8 @@
         },
         {
           "group_by": false,
-          "label": "Alternative",
-          "name": "Alternative",
+          "label": "Part Alternative",
+          "name": "Part Alternative",
           "show": false
         },
         {
@@ -946,9 +946,9 @@
         },
         {
           "group_by": false,
-          "label": "MPN",
-          "name": "MPN",
-          "show": false
+          "label": "Part",
+          "name": "Part",
+          "show": true
         }
       ],
       "filter_string": "",

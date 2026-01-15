@@ -17,7 +17,7 @@ The controller has the following major components:
   - Supply: TVS
   - Actuators: overcurrent, stall-detection, open-load, short-circuit
   - Switch inputs: ESD diodes
-  - External I2C bus: galvanic isolation
+  - External I2C bus: galvanic isolation, hot plug
 
 The device receives user control input from a momentary rocker switch attached to the `CONTROL` input and it provides feedback on its progress with an RGB LED indicator and piezo buzzer. To synchronize the motors and move the bed lift into the correct pose, the device receives position feedback from the `LIFT` actuator hall sensors, `LIFT LIMIT` switches, `SPAN LIMIT` hall sensors, and stepper motor driver stall detection. It can also be monitored and controlled remotely by an external I2C host via the `EXT I2C` connector.
 
@@ -31,16 +31,11 @@ The schematics include the BOM and metadata for the JLCPCB fabrication toolkit p
 
 [Schematics PDF](bed-lift.pdf)
 
-<details>
-<summary>PCB front and back (expand to view)</summary>
-
 ### PCB front
 ![PCB front](bed-lift-front.png)
 
 ### PCB back
 ![PCB back](bed-lift-back.png)
-
-</details>
 
 ## Fabrication
 
@@ -49,13 +44,15 @@ Use the `JLCPCB fabrication toolkit` plug-in to generate files for JLCPCB.
 Fabrication parameters:
 
 - Material: 4 layers, FR4 TG155, ENIG, 1 oz outer copper, 0.5 oz inner copper
-- Via covering: tented (default)
+- Via covering: plugged
 - Min via hole size: 0.3 mm (default)
 - Board outline tolerance: 0.2 mm (default)
 - Assembly side: top
 - Tooling holes: by customer
 - Parts selection: by customer
 - Solder paste: high temp (default)
+
+Because the piezo buzzer is the only component on the back side, it may be cheaper to solder it manually after manufacture.
 
 ## Additional materials
 

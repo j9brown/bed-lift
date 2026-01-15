@@ -4227,13 +4227,12 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "4700250508R00"
-			(at 89.281 73.8096 0)
+		(property "Part" "4700250508R00"
+			(at 86.36 69.85 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 				(hide yes)
 			)
 		)

@@ -12251,9 +12251,9 @@
 		(at 295.91 181.61 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom no)
+		(in_bom yes)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0017c40e-5e9d-4a0d-a147-c5d85855bcf4")
 		(property "Reference" "BZ1"
@@ -13052,6 +13052,106 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:D_Zener_Dual_CommonAnode_KKA_Parallel")
+		(at 222.25 142.24 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "12c180ef-67f5-4509-8003-d04d5fd75af3")
+		(property "Reference" "D2"
+			(at 229.87 141.0857 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "PESD5V0L2UU"
+			(at 229.87 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-323_SC-70"
+			(at 223.52 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0L2UU.pdf"
+			(at 223.52 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Dual Zener diode, common anode on pin 3"
+			(at 222.25 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C78769"
+			(at 222.25 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC Alternative" "C28646364"
+			(at 222.25 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "FT Rotation Offset" "180"
+			(at 222.25 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "bfc5a7f1-fcee-4d74-bcf4-0fc7519dbd96")
+		)
+		(pin "3"
+			(uuid "ab6b70ff-64e8-40b6-9535-c25ce6dabf0f")
+		)
+		(pin "1"
+			(uuid "dbc9eff2-0909-4d3c-9022-d5849a20786a")
+		)
+		(instances
+			(project "bed-lift"
+				(path "/e474b45c-bd68-4fa4-b324-364b1493394e"
+					(reference "D2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+3.3V")
 		(at 109.22 121.92 0)
 		(unit 1)
@@ -13244,7 +13344,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C456091"
+		(property "LCSC Alternative" "C456091"
 			(at 130.81 260.35 0)
 			(effects
 				(font
@@ -13352,7 +13452,7 @@
 				(hide yes)
 			)
 		)
-		(property "Alternative" " GT-A1002WRS-104SBT01"
+		(property "LCSC Alternative" "C41431904"
 			(at 266.7 38.1 0)
 			(effects
 				(font
@@ -13361,7 +13461,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C41431904"
+		(property "Part Alternative" " GT-A1002WRS-104SBT01"
 			(at 266.7 38.1 0)
 			(effects
 				(font
@@ -13476,13 +13576,12 @@
 				(hide yes)
 			)
 		)
-		(property "Alternative" "A750KW687M1EAAE016"
-			(at 56.261 49.6796 0)
+		(property "Part Alternative" "A750KW687M1EAAE016"
+			(at 53.34 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 				(hide yes)
 			)
 		)
@@ -13736,6 +13835,106 @@
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e"
 					(reference "#FLG04")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:D_Zener_Dual_CommonAnode_KKA_Parallel")
+		(at 222.25 207.01 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2838a363-871a-4420-ab40-8d16f4e57c67")
+		(property "Reference" "D3"
+			(at 229.87 205.8557 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "PESD5V0L2UU"
+			(at 229.87 208.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-323_SC-70"
+			(at 223.52 207.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0L2UU.pdf"
+			(at 223.52 207.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Dual Zener diode, common anode on pin 3"
+			(at 222.25 207.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C78769"
+			(at 222.25 207.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC Alternative" "C28646364"
+			(at 222.25 207.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "FT Rotation Offset" "180"
+			(at 222.25 207.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "294b8d7c-98f0-4ca6-bbb8-22c56bb72375")
+		)
+		(pin "3"
+			(uuid "06ade942-4c5a-4ce5-8281-aad736d6372b")
+		)
+		(pin "1"
+			(uuid "cd3c9d90-816f-424c-8933-b6ec0cc727f9")
+		)
+		(instances
+			(project "bed-lift"
+				(path "/e474b45c-bd68-4fa4-b324-364b1493394e"
+					(reference "D3")
 					(unit 1)
 				)
 			)
@@ -15124,7 +15323,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C456091"
+		(property "LCSC Alternative" "C456091"
 			(at 130.81 240.03 0)
 			(effects
 				(font
@@ -15370,7 +15569,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C239187"
+		(property "LCSC Alternative" "C239187"
 			(at 281.94 194.31 0)
 			(effects
 				(font
@@ -16293,7 +16492,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C456091"
+		(property "LCSC Alternative" "C456091"
 			(at 130.81 250.19 0)
 			(effects
 				(font
@@ -17747,88 +17946,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:D_Zener_Dual_CommonAnode_KKA_Parallel")
-		(at 222.25 207.01 0)
-		(mirror y)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "7a57f58a-7d55-4db3-aafc-a6528ae5fdd7")
-		(property "Reference" "D3"
-			(at 229.87 205.74 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "PESD5V0S2UAT"
-			(at 229.87 208.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 223.52 207.01 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0S2UAT.pdf"
-			(at 223.52 207.01 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Dual Zener diode, common anode on pin 3"
-			(at 222.25 207.01 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C552572"
-			(at 222.25 207.01 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "e66ee387-3707-46c1-bc7f-7a2d0988354b")
-		)
-		(pin "3"
-			(uuid "a2fdb3b0-31b4-4ff7-bc87-29f3b5478375")
-		)
-		(pin "1"
-			(uuid "6177d00b-93ed-46e3-b66d-f7f8756a564f")
-		)
-		(instances
-			(project "bed-lift"
-				(path "/e474b45c-bd68-4fa4-b324-364b1493394e"
-					(reference "D3")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 342.9 57.15 0)
 		(unit 1)
@@ -18263,7 +18380,7 @@
 				(hide yes)
 			)
 		)
-		(property "Alternative" " GT-A1002WRS-104SBT01"
+		(property "LCSC Alternative" "C41431904"
 			(at 266.7 57.15 0)
 			(effects
 				(font
@@ -18272,7 +18389,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C41431904"
+		(property "Part Alternative" " GT-A1002WRS-104SBT01"
 			(at 266.7 57.15 0)
 			(effects
 				(font
@@ -19013,7 +19130,7 @@
 				(hide yes)
 			)
 		)
-		(property "FT Rotation Offset" "180"
+		(property "FT Rotation Offset" "0"
 			(at 39.37 45.72 90)
 			(effects
 				(font
@@ -19677,7 +19794,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C456091"
+		(property "LCSC Alternative" "C456091"
 			(at 130.81 255.27 0)
 			(effects
 				(font
@@ -19879,7 +19996,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC_Alternative" "C456091"
+		(property "LCSC Alternative" "C456091"
 			(at 130.81 245.11 0)
 			(effects
 				(font
@@ -21067,89 +21184,6 @@
 			(project "bed-lift"
 				(path "/e474b45c-bd68-4fa4-b324-364b1493394e"
 					(reference "R10")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:D_Zener_Dual_CommonAnode_KKA_Parallel")
-		(at 222.25 142.24 0)
-		(mirror y)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "ecb9ef42-09f8-4034-b3d8-6745ee9b8fac")
-		(property "Reference" "D2"
-			(at 229.87 140.97 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "PESD5V0S2UAT"
-			(at 229.87 143.51 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 223.52 142.24 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0S2UAT.pdf"
-			(at 223.52 142.24 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Dual Zener diode, common anode on pin 3"
-			(at 222.25 142.24 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C552572"
-			(at 222.25 142.24 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "193286e5-e481-445c-9eab-a41b0275127e")
-		)
-		(pin "3"
-			(uuid "245397e6-ddd5-48d7-8525-524667b376a3")
-		)
-		(pin "1"
-			(uuid "ca292cfc-d63f-4bf6-875f-1660a2bfb7d7")
-		)
-		(instances
-			(project "bed-lift"
-				(path "/e474b45c-bd68-4fa4-b324-364b1493394e"
-					(reference "D2")
 					(unit 1)
 				)
 			)

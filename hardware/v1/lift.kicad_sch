@@ -3369,13 +3369,12 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "4700250508R00"
-			(at 108.331 54.7596 0)
+		(property "Part" "4700250508R00"
+			(at 105.41 50.8 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 				(hide yes)
 			)
 		)
@@ -4681,7 +4680,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "PESD5V0S2UAT"
+		(property "Value" "PESD5V0L2UU"
 			(at 186.182 134.4986 90)
 			(effects
 				(font
@@ -4690,7 +4689,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-323_SC-70"
 			(at 181.61 134.62 0)
 			(effects
 				(font
@@ -4699,7 +4698,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0S2UAT.pdf"
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0L2UU.pdf"
 			(at 181.61 134.62 0)
 			(effects
 				(font
@@ -4717,8 +4716,26 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C552572"
+		(property "LCSC" "C78769"
 			(at 181.61 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC Alternative" "C28646364"
+			(at 181.61 133.35 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "FT Rotation Offset" "180"
+			(at 181.61 133.35 90)
 			(effects
 				(font
 					(size 1.27 1.27)
