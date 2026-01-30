@@ -1,4 +1,4 @@
-name: bits
+name: drv8434s
 build:
   settings:
     dts_root: zephyr

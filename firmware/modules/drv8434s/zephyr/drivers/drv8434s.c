@@ -602,7 +602,7 @@ int drv8434s_get_trq_count(const struct device *dev, const struct drv8434s_optio
 #define DRV8434S_DEFINE(inst)                                                                       \
 	BUILD_ASSERT(DRV8434S_CHECK_NUM_DEVICES(DT_PROP(DT_DRV_INST(inst), num_devices)));              \
 	static const struct drv8434s_config drv8434s_##inst##_config = {                                \
-        .spi = SPI_DT_SPEC_INST_GET(inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_MODE_CPHA | SPI_WORD_SET(8), 50),   \
+        .spi = SPI_DT_SPEC_INST_GET(inst, SPI_OP_MODE_MASTER | SPI_TRANSFER_MSB | SPI_MODE_CPHA | SPI_WORD_SET(8)),   \
 		.fault_gpio = GPIO_DT_SPEC_GET_OR(DT_DRV_INST(inst), fault_gpios, {0}),                     \
 		.sleep_gpio = GPIO_DT_SPEC_GET_OR(DT_DRV_INST(inst), sleep_gpios, {0}),                     \
 		.num_devices = DT_PROP(DT_DRV_INST(inst), num_devices),                     \

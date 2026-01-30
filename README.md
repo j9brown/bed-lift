@@ -76,6 +76,36 @@ Feel free to contact me for advice if you are interested in building a bed like 
 
 </details>
 
+## How to build the firmware
+
+The firmware is based on Zephyr RTOS v4.3 and compiled with `west`.
+
+1. Install the Zephyr RTOS SDK tools.  You can either follow the [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html) or install an extension for your IDE, such as [Zephyr IDE](https://zephyr-ide.mylonics.com/) or [Workbench for Zephyr](https://z-workbench.com/), that can install the tools for you.
+
+2. Install the [xPack OpenOCD](https://xpack-dev-tools.github.io/openocd-xpack/docs/install/) package for your OS and add it to your system `PATH`.  This step is needed because the version of OpenOCD that is distributed with Zephyr is too old and doesn't support the STM32C0x series of chips.  We need OpenOCD v0.12.0-7 at minimum.
+
+3. Get the code and its dependencies.  This is a little more complicated than simply cloning this git repository because the Zephyr `west` multi-tool assumes that all of the code resides within a top directory called a workspace.  You will need to create an empty directory to be the workspace first.  Here's how to do it from the command-line and the same thing can be done with IDE extensions.
+
+```sh
+$ mkdir bed-lift-workspace
+$ cd bed-lift-workspace
+$ west init -m https://github.com/j9brown/bed-lift
+$ west update
+```
+
+4. Build and flash the firmware.
+
+```sh
+$ cd bed-lift/firmware/app
+$ west build -p
+$ west flash
+```
+
+Firmware for the older prototypes is preserved in the git history.
+
+- The v0.2 firmware was based on Zephyr RTOS v4.2.1 and compiled with Platform IO.
+- The v0.1 firmware was based on Arduino and compiled with Platform IO.
+
 ## Notice
 
 The bed-lift software, documentation, design, and all copyright protected artifacts are released under the terms of the [MIT license](LICENSE).

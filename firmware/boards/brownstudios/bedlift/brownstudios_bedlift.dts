@@ -1,6 +1,6 @@
 /dts-v1/;
-#include <st/c0/stm32c031X6.dtsi>
-#include <st/c0/stm32c031c(4-6)tx-pinctrl.dtsi>
+#include <st/c0/stm32c051X8.dtsi>
+#include <st/c0/stm32c051c8tx-pinctrl.dtsi>
 
 #define USE_SPI_DMA 0
 
@@ -169,10 +169,8 @@
 		status = "okay";
 		reg = <0>;
 		spi-max-frequency = <10000000>; /* datasheet maximum: 10 MHz */
-		/* TODO: These will be needed for Zephyr 4.3, PIO currently has Zephyr 4.2.1.
 		spi-cs-setup-delay-ns = <50>;
 		spi-cs-hold-delay-ns = <50>;
-		*/
 
 		num-devices = <4>;
 		fault-gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
