@@ -34,6 +34,34 @@ struct __packed monitor_setting {
 };
 _Static_assert(sizeof(struct monitor_setting) == 4, "");
 
+struct __packed monitor_lift_debug {
+    int lift1_duty : 12; // q11 fraction
+    int lift2_duty : 12; // q11 fraction
+    unsigned limit_state : 2;
+    unsigned : 6;
+};
+_Static_assert(sizeof(struct monitor_lift_debug) == 4, "");
+
+struct __packed monitor_span_debug {
+    unsigned speed : 24; // microsteps per second
+    bool extend : 1;
+    unsigned limit_state : 4;
+    unsigned : 3;
+};
+_Static_assert(sizeof(struct monitor_span_debug) == 4, "");
+
+struct __packed monitor_span_test {
+    unsigned speed_mm_s : 8;
+    unsigned accel_mm_s2 : 8;
+    unsigned stall_threshold : 12; // if non-zero, override the default
+    bool test : 1; // if true, enable test mode
+    unsigned : 3;
+};
+_Static_assert(sizeof(struct monitor_span_test) == 4, "");
+
 void monitor_set_status(struct monitor_status value);
+void monitor_set_lift_debug(struct monitor_lift_debug value);
+void monitor_set_span_debug(struct monitor_span_debug value);
 
 struct monitor_setting monitor_get_setting(void);
+struct monitor_span_test monitor_get_span_test(void);

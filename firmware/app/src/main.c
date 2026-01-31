@@ -1,19 +1,27 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/watchdog.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 
 #include "bed/bed.h"
 #include "bed/lift.h"
 #include "bed/span.h"
 #include "control.h"
 #include "indicator.h"
+#include "melody.h"
 #include "monitor.h"
+#include "power.h"
+
+LOG_MODULE_REGISTER(app);
 
 #define WATCHDOG_TIMEOUT_MS (10000)
 static const struct device *watchdog_dev = DEVICE_DT_GET(DT_NODELABEL(iwdg));
 
 // Timeout for the indicator to go dark after completing an activity.
 #define ACTIVITY_TIMEOUT_MS (1500)
+
+// Timeout to revert to the main menu after completing an activity.
+#define MENU_TIMEOUT_MS (60000)
 
 /*
  * Error codes.
@@ -57,6 +65,46 @@ static void show_error(int err) {
             break;
         default:
             indicator_pattern(indicator_pattern_generic_error, 0);
+            break;
+    }
+}
+
+/*
+ * Melodies.
+ */
+
+MELODY(melody_error_forbidden,
+    MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(E6, 50));
+
+MELODY(melody_error_alert,
+    MELODY_NOTE(E6, 500), MELODY_REST(250), MELODY_NOTE(E6, 500), MELODY_REST(250), MELODY_NOTE(E6, 500));
+
+MELODY(melody_pose_lounge,
+    MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(G6, 250));
+
+MELODY(melody_pose_sleep,
+    MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(C6, 250));
+
+static void melody_play_error(int err) {
+    switch (err) {
+        case CONTROL_ERROR_INHIBITED:
+            melody_play(melody_error_forbidden);
+            break;
+        default:
+            melody_play(melody_error_alert);
+            break;
+    }
+}
+
+static void melody_play_pose(void) {
+    switch (bed_get_current_pose()) {
+        case BED_POSE_LOUNGE:
+            melody_play(melody_pose_lounge);
+            break;
+        case BED_POSE_SLEEP:
+            melody_play(melody_pose_sleep);
+            break;
+        default:
             break;
     }
 }
@@ -140,13 +188,15 @@ static int do_hold_action(bool up, struct monitor_setting setting) {
         case MENU_MAIN:
             return bed_poll_pose(up ? BED_POSE_LOUNGE : BED_POSE_SLEEP);
         case MENU_JOG_LIFT: {
-            int span_err = span_poll_standby();
+            bed_prepare_for_manual_action();
+            int span_err = span_poll_sleep();
             int lift_err = lift_poll_jog(jog_lift_specs[menu_mode].move, up);
             return span_err ? span_err : lift_err;
         }
         case MENU_JOG_SPAN: {
+            bed_prepare_for_manual_action();
             int span_err = span_poll_jog(jog_span_specs[menu_mode].move, up, jog_span_specs[menu_mode].actuator_set);
-            int lift_err = lift_poll_standby();
+            int lift_err = lift_poll_sleep();
             return span_err ? span_err : lift_err;
         }
         default:
@@ -219,10 +269,16 @@ static int setup(void) {
     if ((err = wdt_setup(watchdog_dev, WDT_OPT_PAUSE_HALTED_BY_DBG))) {
         return err;
     }
+    if ((err = melody_init())) {
+        return err;
+    }
     if ((err = control_init())) {
         return err;
     }
     if ((err = monitor_init())) {
+        return err;
+    }
+    if ((err = power_init())) {
         return err;
     }
     if ((err = bed_init())) {
@@ -295,18 +351,32 @@ static void loop(void) {
     if (did_action) {
         last_action_time = k_uptime_get();
         if (err == 0) {
+            if (!action_complete && menu == MENU_MAIN) {
+                melody_play_pose();
+            }
             action_complete = true;
         }
+    } else if (menu != MENU_MAIN && k_uptime_get() - last_action_time >= MENU_TIMEOUT_MS) {
+        menu = MENU_MAIN;
+    }
+    if (menu != MENU_MAIN) {
+        // enable 5V power so the span hall sensors operate while on the test menu
+        power_5v_request(POWER_DEMAND_TEST);
+    } else {
+        power_5v_release(POWER_DEMAND_TEST);
     }
     if (!did_action || action_complete) {
         err = do_rest();
     }
     if (err < 0) {
+        if (!action_error) {
+            melody_play_error(err);
+        }
         action_error = err;
+        last_error = err;
     }
     if (action_error) {
         show_error(action_error);
-        last_error = action_error;
     } else if (k_uptime_get() - last_action_time < ACTIVITY_TIMEOUT_MS
             || menu != MENU_MAIN) {
         show_status();

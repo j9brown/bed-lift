@@ -12,7 +12,9 @@
  *   Bit  2 -  3: Current bed pose, @see enum bed_pose
  *   Bit  4 -  5: Target bed pose, @see enum bed_pose
  *   Bit  8 - 10: Current lift position, @see enum lift_position
- *   Bit 11 - 12: Current span position, @see enum span_position
+ *   Bit 11 - 13: Current lift state, @see enum lift_state
+ *   Bit 14 - 15: Current span position, @see enum span_position
+ *   Bit 16 - 17: Current span state, @see enum span_state
  *   Bit      21: Control inhibited; set to 1 when the control panel is inhibited from performing actions
  *   Bit      22: Control active; set to 1 when the control panel is performing an action
  *   Bit      23: Control error; set to 1 when the control panel's action has encountered an error
@@ -20,7 +22,13 @@
  *
  * REGISTER 0x01: CONTROL (read-write)
  *
- *   Bit       1: Control inhibit; set to 1 to inhibit the control panel from performing actions
+ *   Bit       0: Control inhibit; set to 1 to inhibit the control panel from performing actions
+ *
+ * REGISTER 0x02: LIFT DEBUG (read-only)
+ *
+ * REGISTER 0x03: SPAN DEBUG (read-only)
+ *
+ * REGISTER 0x04: SPAN TEST (read-write)
  */
 
 #include <errno.h>
@@ -37,16 +45,19 @@
 enum monitor_register {
 	MONITOR_REGISTER_STATUS = 0,
 	MONITOR_REGISTER_SETTING = 1,
+	MONITOR_REGISTER_LIFT_DEBUG = 2,
+	MONITOR_REGISTER_SPAN_DEBUG = 3,
+	MONITOR_REGISTER_SPAN_TEST = 4,
 };
 
-static atomic_t monitor_registers[2];
+static atomic_t monitor_registers[5];
 
 static inline bool monitor_register_is_valid(uint8_t reg) {
 	return reg >= 0 && reg < ARRAY_SIZE(monitor_registers);
 }
 
 static inline bool monitor_register_is_externally_writable(uint8_t reg) {
-	return reg == MONITOR_REGISTER_SETTING;
+	return reg == MONITOR_REGISTER_SETTING || reg == MONITOR_REGISTER_SPAN_TEST;
 }
 
 static inline void monitor_register_write(uint8_t reg, uint32_t value) {
@@ -71,7 +82,8 @@ enum monitor_i2c_state {
 	MONITOR_I2C_READ_OR_WRITE_VALUE = 2,
 	MONITOR_I2C_WRITE_VALUE = 3,
 	MONITOR_I2C_READ_VALUE = 4,
-	MONITOR_I2C_ERROR = 4,
+	MONITOR_I2C_READ_FINISHED = 5,
+	MONITOR_I2C_ERROR = 6,
 };
 
 struct monitor_i2c_data {
@@ -129,9 +141,16 @@ static int monitor_i2c_target_read_requested_or_processed_handler(struct i2c_tar
 		case MONITOR_I2C_READ_VALUE:
 			*val = monitor_i2c_data.value & 0xff;
 			monitor_i2c_data.value >>= 8;
-			if (--monitor_i2c_data.remaining) {
-				return 0;
+			if (--monitor_i2c_data.remaining == 0) {
+				monitor_i2c_data.state = MONITOR_I2C_READ_FINISHED;
 			}
+			return 0;
+		case MONITOR_I2C_READ_FINISHED:
+			// FIXME: We receive one additional call to read after the last byte has been transmitted.
+			// It's unclear whether it is originating from the client (esphome with ESP-IDF) or is simply
+			// an artifact of the I2C driver handling the TXIS interrupt condition.  Tolerate the overread
+			// instead of reporting an error (which produces logspam).
+			*val = 0;
 			monitor_i2c_data.state = MONITOR_I2C_IDLE;
 			return 0;
 		default:
@@ -165,7 +184,20 @@ void monitor_set_status(struct monitor_status value) {
 	monitor_register_write(MONITOR_REGISTER_STATUS, *(uint32_t *)&value);
 }
 
+void monitor_set_lift_debug(struct monitor_lift_debug value) {
+	monitor_register_write(MONITOR_REGISTER_LIFT_DEBUG, *(uint32_t *)&value);
+}
+
+void monitor_set_span_debug(struct monitor_span_debug value) {
+	monitor_register_write(MONITOR_REGISTER_SPAN_DEBUG, *(uint32_t *)&value);
+}
+
 struct monitor_setting monitor_get_setting(void) {
 	uint32_t value = monitor_register_read(MONITOR_REGISTER_SETTING);
 	return *(struct monitor_setting *)&value;
+}
+
+struct monitor_span_test monitor_get_span_test(void) {
+	uint32_t value = monitor_register_read(MONITOR_REGISTER_SPAN_TEST);
+	return *(struct monitor_span_test *)&value;
 }

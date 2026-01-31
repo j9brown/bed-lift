@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/__assert.h>
 
 #include "bed/bed.h"
@@ -13,7 +14,8 @@ static enum bed_pose bed_current_pose;
 static enum bed_pose bed_target_pose;
 static enum bed_state bed_state;
 #if BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE
-static bool bed_wait_for_span_before_lowering_in_safe_zone;
+static bool bed_was_extending_span_while_lowering_in_safe_zone;
+static bool bed_finish_extending_span_before_lowering_in_safe_zone;
 #endif
 
 int bed_init(void) {
@@ -44,8 +46,8 @@ int bed_poll_stop(void) {
     if (bed_state == BED_STATE_MOVING) {
         bed_state = BED_STATE_ABORTED;
     }
-    int lift_err = lift_poll_standby();
-    int span_err = span_poll_sleep(); // span must sleep after lift action
+    int lift_err = lift_poll_sleep();
+    int span_err = span_poll_sleep();
     if (lift_err > 0 || span_err > 0) {
         return 1;
     }
@@ -68,7 +70,8 @@ int bed_poll_pose(enum bed_pose pose) {
         bed_current_pose = BED_POSE_UNKNOWN;
         bed_target_pose = pose;
 #if BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE
-        bed_wait_for_span_before_lowering_in_safe_zone = false;
+        bed_was_extending_span_while_lowering_in_safe_zone = false;
+        bed_finish_extending_span_before_lowering_in_safe_zone = false;
 #endif
     }
 
@@ -81,16 +84,16 @@ int bed_poll_pose(enum bed_pose pose) {
                     switch (span_get_position()) {
                         case SPAN_POSITION_EXTENDED:
                             // Achieved sleep pose
-                            lift_err = lift_poll_standby();
-                            span_err = span_poll_sleep(); // span must sleep after lift action
+                            lift_err = lift_poll_sleep();
+                            span_err = span_poll_sleep();
                             maybe_done = true;
                             break;
                         default:
                             // Raise to safe zone to extend span
-                            span_err = span_poll_standby(); // span must wake before lift action
+                            span_err = span_poll_sleep();
                             lift_err = lift_poll_raise();
 #if BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE
-                            bed_wait_for_span_before_lowering_in_safe_zone = true;
+                            bed_finish_extending_span_before_lowering_in_safe_zone = true;
 #endif
                             break;
                     }
@@ -99,15 +102,23 @@ int bed_poll_pose(enum bed_pose pose) {
                     switch (span_get_position()) {
                         case SPAN_POSITION_EXTENDED:
                             // Proceed to lower the lift
-                            span_err = span_poll_standby(); // span must wake before lift action
+                            span_err = span_poll_sleep();
                             lift_err = lift_poll_lower();
                             break;
                         default:
                             // Raise to safe zone to extend span
-                            span_err = span_poll_standby(); // span must wake before lift action
-                            lift_err = lift_poll_raise();
 #if BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE
-                            bed_wait_for_span_before_lowering_in_safe_zone = true;
+                            if (bed_was_extending_span_while_lowering_in_safe_zone) {
+                                lift_err = lift_poll_sleep();
+                                span_err = span_poll_extend();
+                            } else {
+                                bed_finish_extending_span_before_lowering_in_safe_zone = true;
+                                span_err = span_poll_sleep();
+                                lift_err = lift_poll_raise();
+                            }
+#else
+                            span_err = span_poll_sleep();
+                            lift_err = lift_poll_raise();
 #endif
                             break;
                     }
@@ -116,35 +127,36 @@ int bed_poll_pose(enum bed_pose pose) {
                     switch (span_get_position()) {
                         case SPAN_POSITION_EXTENDED:
                             // Proceed to lower the lift
-                            span_err = span_poll_standby(); // span must wake before lift action
+                            span_err = span_poll_sleep();
                             lift_err = lift_poll_lower();
                             break;
                         default:
                             // Extend the span before lowering or move both together
-                            span_err = span_poll_extend(); // span must wake before lift action
 #if BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE
-                            if (bed_wait_for_span_before_lowering_in_safe_zone) {
+                            if (bed_finish_extending_span_before_lowering_in_safe_zone) {
                                 // Handle edge case where the lift approached the safe zone from below
                                 // so the span must completely extend before lowering again.
-                                lift_err = lift_poll_standby();
+                                lift_err = lift_poll_sleep();
                             } else {
                                 lift_err = lift_poll_lower();
+                                bed_was_extending_span_while_lowering_in_safe_zone = true;
                             }
 #else
-                            lift_err = lift_poll_standby();
+                            lift_err = lift_poll_sleep();
 #endif
+                            span_err = span_poll_extend();
                             break;
                     }
                     break;
                 case LIFT_POSITION_ABOVE_SAFE_ZONE:
                     // Proceed to lower the lift
-                    span_err = span_poll_standby(); // span must wake before lift action
+                    span_err = span_poll_sleep();
                     lift_err = lift_poll_lower();
                     break;
                 case LIFT_POSITION_ABOVE_CEILING:
                 case LIFT_POSITION_UPPER_LIMIT:
                     // Proceed to lower the lift
-                    span_err = span_poll_standby(); // span must wake before lift action
+                    span_err = span_poll_sleep();
                     lift_err = lift_poll_lower();
                     break;
                 default:
@@ -158,28 +170,28 @@ int bed_poll_pose(enum bed_pose pose) {
             switch (lift_get_position()) {
                 case LIFT_POSITION_LOWER_LIMIT:
                     // Proceed to raise the lift
-                    span_err = span_poll_standby(); // span must wake before lift action
+                    span_err = span_poll_sleep();
                     lift_err = lift_poll_raise();
                     break;
                 case LIFT_POSITION_BELOW_SAFE_ZONE:
                     // Proceed to raise the lift
-                    span_err = span_poll_standby(); // span must wake before lift action
+                    span_err = span_poll_sleep();
                     lift_err = lift_poll_raise();
                     break;
                 case LIFT_POSITION_IN_SAFE_ZONE:
                     switch (span_get_position()) {
                         case SPAN_POSITION_RETRACTED:
                             // Proceed to raise the lift
-                            span_err = span_poll_standby(); // span must wake before lift action
+                            span_err = span_poll_sleep();
                             lift_err = lift_poll_raise();
                             break;
                         default:
                             // Retract the span before raising or move both together
-                            span_err = span_poll_retract(); // span must wake before lift action
+                            span_err = span_poll_retract();
 #if BED_MOVE_SPAN_AND_LIFT_TOGETHER_IN_SAFE_ZONE
                             lift_err = lift_poll_raise();
 #else
-                            lift_err = lift_poll_standby();
+                            lift_err = lift_poll_sleep();
 #endif
                             break;
                     }
@@ -188,13 +200,13 @@ int bed_poll_pose(enum bed_pose pose) {
                     switch (span_get_position()) {
                         case SPAN_POSITION_RETRACTED:
                             // Proceed to raise the lift
-                            span_err = span_poll_standby(); // span must wake before lift action
+                            span_err = span_poll_sleep();
                             lift_err = lift_poll_raise();
                             break;
                         default:
                             // Retract the span before raising
-                            span_err = span_poll_retract(); // span must wake before lift action
-                            lift_err = lift_poll_standby();
+                            lift_err = lift_poll_sleep();
+                            span_err = span_poll_retract();
                             break;
                     }
                     break;
@@ -203,14 +215,14 @@ int bed_poll_pose(enum bed_pose pose) {
                     switch (span_get_position()) {
                         case SPAN_POSITION_RETRACTED:
                             // Achieved lounge pose
-                            lift_err = lift_poll_standby();
-                            span_err = span_poll_sleep(); // span must sleep after lift action
+                            lift_err = lift_poll_sleep();
+                            span_err = span_poll_sleep();
                             maybe_done = true;
                             break;
                         default:
                             // Retract the span before completion
-                            span_err = span_poll_retract(); // span must wake before lift action
-                            lift_err = lift_poll_standby();
+                            lift_err = lift_poll_sleep();
+                            span_err = span_poll_retract();
                             break;
                     }
                     break;
@@ -244,4 +256,10 @@ int bed_poll_pose(enum bed_pose pose) {
     bed_current_pose = pose;
     bed_state = BED_STATE_DONE;
     return 0;
+}
+
+void bed_prepare_for_manual_action(void) {
+    bed_current_pose = BED_POSE_UNKNOWN;
+    bed_target_pose = BED_POSE_UNKNOWN;
+    bed_state = BED_STATE_ABORTED;
 }

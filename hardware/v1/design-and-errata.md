@@ -90,8 +90,8 @@ Heat sinks
 
 Actuators
 
-  - 2 [Progressive Automation PA-09-03-30](https://www.progressiveautomations.com/products/mini-medium-force-linear-actuator) linear actuators for the lift, rated for 4 A at maximum 330 lbs load, hall sensor produces 660 pulses per inch of travel
-  - 4 [Stepper Online 17E19S1684MB4-300RS](https://www.omc-stepperonline.com/nema-17-external-acme-linear-stepper-motor-1-68a-48mm-stack-screw-lead-8mm-0-31496-lead-length-300mm-17e19s1684mb4-300rs) stepper motors for the spans, rated for 1.68 A per phase
+  - 2 [Progressive Automation PA-09-03-30](https://www.progressiveautomations.com/products/mini-medium-force-linear-actuator) linear actuators for the lift, rated for 4 A peak at maximum 330 lbs load, hall sensor produces 660 pulses per inch of travel
+  - 4 [Stepper Online 17E19S1684MB4-300RS](https://www.omc-stepperonline.com/nema-17-external-acme-linear-stepper-motor-1-68a-48mm-stack-screw-lead-8mm-0-31496-lead-length-300mm-17e19s1684mb4-300rs) stepper motors for the spans, rated for 1.68 A rms per phase
 
 ## Lift position encoders
 
@@ -198,7 +198,7 @@ Quadrature decoding triggered by EXTI0-1 and EXTI2-3 interrupt with high-priorit
 
 The drivers are connected to the SPI bus in a daisy-chain. All drivers receive the same step pulse and the direction is specified via SPI.
 
-The TIM16 break function prevents runaway motor operation when triggered by a system fault or debug mode.  Optionally could be configured to stop all span actuators on faults (although this hasn't been needed yet).
+The TIM16 break function prevents runaway motor operation when triggered by a system fault or debug mode.  Optionally could be configured to stop all span actuators on driver faults (although this hasn't been needed yet).
 
 - DBG_TIM16_STOP freezes the counter during debugging.
 - TIM16_BDTR:OSSI=1 forces outputs to inactive state on break.

@@ -18,7 +18,7 @@
 /**
  * @brief Turn the indicator off.
  */
-void indicator_off();
+void indicator_off(void);
 
 /**
  * @brief Turn the indicator on.
@@ -42,7 +42,9 @@ struct indicator_pattern_entry {
     unsigned off_time : 5;
     unsigned cycles : 6;
 };
+_Static_assert(sizeof(struct indicator_pattern_entry) == 4, "");
 typedef struct indicator_pattern_entry indicator_pattern_t;
+
 #define INDICATOR_PATTERN_PARAM_CYCLES (0x3f)
 #define INDICATOR_PATTERN_ENTRY(hue_, on_time_, off_time_, cycles_) { .hue = hue_, .on_time = on_time_, .off_time = off_time_, .cycles = cycles_ }
 #define INDICATOR_PATTERN_ENTRY_REPEAT(delay_) INDICATOR_PATTERN_ENTRY(0, 0, delay_, 0)

@@ -37,18 +37,25 @@
 #include <stm32c0xx_ll_tim.h>
 #include <zephyr/drivers/counter.h>
 #include <zephyr/drivers/drv8434s.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/logging/log.h>
 
 #include "bed/span.h"
+#include "monitor.h"
+#include "power.h"
 
+LOG_MODULE_REGISTER(span);
+
+// Number of actuators.
 #define SPAN_NUM_ACTUATORS (4)
 
 // Disables the actuators whose corresponding bits are set to prevent, prevents them
 // from receiving step inputs, ignores faults, and operates their tandem peer in
 // independent mode.  Can be used to work around missing or non-functional actuators.
-#define SPAN_DEBUG_DISABLED_ACTUATORS (BIT(0))
+#define SPAN_DEBUG_DISABLED_ACTUATORS 0
 
 // When set to 1, enables stall learning
 // Results can only be observed with the debugger because logging is disabled.
@@ -58,30 +65,37 @@
 // When set to 1, configures the stall threshold to 0.
 #define SPAN_DEBUG_STALL_DETECTION_DISABLED 0
 
+// When set to 1, ignores the limit sensors and assumes the spans reached home.
+#define SPAN_DEBUG_IGNORE_LIMITS 1 // XXX
+
 // Establishes an unit of length equal to the distance traversed theoretically
 // by one microstep with the given divisor. Note that the step loop may issue
 // requests with multiples of this microstep size when moving at higher speeds.
 #define SPAN_TRAVEL_MICROSTEP_DIVISOR 256
 
 // Linear actuator travel parameters.
-#define SPAN_MM_PER_STEP (0.04)
-#define SPAN_TRAVEL_PER_MM (SPAN_TRAVEL_MICROSTEP_DIVISOR * 1. / SPAN_MM_PER_STEP)
+#define SPAN_STEPS_PER_MM (25) // 0.04 mm per step
+#define SPAN_TRAVEL_PER_MM (SPAN_STEPS_PER_MM * SPAN_TRAVEL_MICROSTEP_DIVISOR)
 #define SPAN_MM_TO_TRAVEL(mm) (int)(SPAN_TRAVEL_PER_MM * mm)
 
 // The full distance that the actuators are expected to travel from one endstop to the other.
-#define SPAN_FULL_TRAVEL (SPAN_MM_TO_TRAVEL(235.))
+#define SPAN_FULL_TRAVEL (SPAN_MM_TO_TRAVEL(235))
 
 // The distance to move the actuators back from their endstops to remove strain on the lead screw.
-#define SPAN_RELIEF_TRAVEL (SPAN_MM_TO_TRAVEL(3.))
+#define SPAN_RELIEF_TRAVEL (SPAN_MM_TO_TRAVEL(3))
 
 // Additional travel to make up for inaccuracies and partial stalls.
-#define SPAN_EXTRA_TRAVEL (SPAN_MM_TO_TRAVEL(15.))
+#define SPAN_EXTRA_TRAVEL (SPAN_MM_TO_TRAVEL(15))
 
 // The distance that one actuator is allowed to continue traveling after its peer in a pair
 // has stalled (presumably at an endstop). Constrains how far the actuators can become desynchronized.
 // Transient stalls can also happen while in motion if the frame binds up slightly.
 // For now, we rely on the user to recover from those situations.
-#define SPAN_MAX_DESYNC_TRAVEL (SPAN_MM_TO_TRAVEL(10.))
+#define SPAN_MAX_DESYNC_TRAVEL (SPAN_MM_TO_TRAVEL(15))
+
+// The minimum speed at which to travel.
+// Stall detection may not work correctly below this speed.
+#define SPAN_MINIMUM_SPEED (SPAN_MM_TO_TRAVEL(1))
 
 // Describes one continuous movement and parameters for ramping the speed.
 // The movement starts at a slow speed for the slow start distance, accelerates to a rapid speed,
@@ -101,15 +115,14 @@ struct span_move_spec {
     unsigned accel;        // travel units per second per second
 };
 
-#define SPAN_HOME_SLOW_START_TRAVEL (SPAN_MM_TO_TRAVEL(5.))
-#define SPAN_HOME_SLOW_STOP_TRAVEL (SPAN_MM_TO_TRAVEL(10.))
-#define SPAN_HOME_SPEED_SLOW (SPAN_MM_TO_TRAVEL(8.))
-#define SPAN_HOME_SPEED_RAPID (SPAN_MM_TO_TRAVEL(30.))
-#define SPAN_HOME_ACCEL (SPAN_MM_TO_TRAVEL(20.))
+#define SPAN_HOME_SLOW_START_TRAVEL (SPAN_MM_TO_TRAVEL(5))
+#define SPAN_HOME_SLOW_STOP_TRAVEL (SPAN_MM_TO_TRAVEL(15))
+#define SPAN_HOME_SPEED_SLOW (SPAN_MM_TO_TRAVEL(15))
+#define SPAN_HOME_SPEED_RAPID (SPAN_MM_TO_TRAVEL(50))
+#define SPAN_HOME_ACCEL (SPAN_MM_TO_TRAVEL(80))
 
 #define SPAN_DISTANCE(velocity_delta, accel) (int)(((int64_t)(velocity_delta) * (velocity_delta)) / (accel) / 2)
 
-/*
 static const struct span_move_spec span_move_spec_home = {
     .travel_total = SPAN_FULL_TRAVEL + SPAN_EXTRA_TRAVEL,
     .travel_slow_start = SPAN_HOME_SLOW_START_TRAVEL,
@@ -119,20 +132,11 @@ static const struct span_move_spec span_move_spec_home = {
     .speed_rapid = SPAN_HOME_SPEED_RAPID,
     .accel = SPAN_HOME_ACCEL,
 };
-*/
-static const struct span_move_spec span_move_spec_home = {
-    .travel_total = SPAN_FULL_TRAVEL + SPAN_EXTRA_TRAVEL,
-    .travel_slow_start = 0,
-    .travel_slow_stop = 0,
-    .speed_slow = SPAN_MM_TO_TRAVEL(20.),
-    .speed_rapid = SPAN_MM_TO_TRAVEL(20.),
-    .accel = 0,
-};
 
-#define SPAN_RELIEF_SPEED (SPAN_MM_TO_TRAVEL(10.))
+#define SPAN_RELIEF_SPEED SPAN_HOME_SPEED_SLOW // (SPAN_MM_TO_TRAVEL(10))
 
 static const struct span_move_spec span_move_spec_relief = {
-    .travel_total = SPAN_MM_TO_TRAVEL(4.),
+    .travel_total = SPAN_MM_TO_TRAVEL(4),
     .travel_slow_start = 0,
     .travel_slow_stop = 0,
     .speed_slow = SPAN_RELIEF_SPEED,
@@ -140,7 +144,7 @@ static const struct span_move_spec span_move_spec_relief = {
     .accel = 0,
 };
 
-#define SPAN_JOG_SPEED (SPAN_MM_TO_TRAVEL(5.))
+#define SPAN_JOG_SPEED (SPAN_MM_TO_TRAVEL(5))
 
 static const struct span_move_spec span_move_spec_jog = {
     .travel_total = SPAN_FULL_TRAVEL + SPAN_EXTRA_TRAVEL,
@@ -163,28 +167,20 @@ static inline uint16_t span_stall_threshold(unsigned speed) {
     if (SPAN_DEBUG_STALL_DETECTION_DISABLED) {
         return 0;
     }
-    if (speed >= SPAN_MM_TO_TRAVEL(40.)) {
-        return 1000;
-    }
-    if (speed >= SPAN_MM_TO_TRAVEL(30.)) {
-        return 500;
-    }
-    if (speed >= SPAN_MM_TO_TRAVEL(20.)) {
-        return 180;
-    }
-    if (speed >= SPAN_MM_TO_TRAVEL(15.)) {
-        return 150;
-    }
-    if (speed >= SPAN_MM_TO_TRAVEL(10.)) {
-        return 100;
-    }
-    if (speed >= SPAN_MM_TO_TRAVEL(5.)) {
-        return 80;
-    }
-    if (speed >= SPAN_MM_TO_TRAVEL(3.)) {
-        return 40;
-    }
-    return 30;
+    #define SPAN_STALL_THRESHOLD(min_speed_mm_per_s, trq_count) \
+        if (speed > SPAN_MM_TO_TRAVEL(min_speed_mm_per_s)) return (trq_count);
+    SPAN_STALL_THRESHOLD(50, 2800);
+    SPAN_STALL_THRESHOLD(45, 2000);
+    SPAN_STALL_THRESHOLD(40, 1200);
+    SPAN_STALL_THRESHOLD(35, 800);
+    SPAN_STALL_THRESHOLD(30, 400);
+    SPAN_STALL_THRESHOLD(25, 200);
+    SPAN_STALL_THRESHOLD(15, 150);
+    SPAN_STALL_THRESHOLD(8, 120);
+    SPAN_STALL_THRESHOLD(5, 80);
+    SPAN_STALL_THRESHOLD(3, 50);
+    SPAN_STALL_THRESHOLD(2, 25);
+    return 15; // 1 mm / s
 }
 
 // This semaphore guards the global state of this component and access to the device drivers.
@@ -192,15 +188,64 @@ static inline uint16_t span_stall_threshold(unsigned speed) {
 K_SEM_DEFINE(span_state_sem, 1, 1);
 
 /*
- * STEP SEQUENCER: Generates a limited number of step pulses at a specified rate.
+ * SPAN LIMIT SWITCHES
+ */
+
+// Lift limit switch debounce interval.
+#define SPAN_LIMIT_DEBOUNCE_MS (50)
+#define SPAN_LIMIT_DEBOUNCE_CYCLES (uint32_t)((uint64_t)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC * SPAN_LIMIT_DEBOUNCE_MS / 1000)
+
+#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+
+static const struct gpio_dt_spec span1_limit_a_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, span1_limit_a_gpios);
+static const struct gpio_dt_spec span1_limit_b_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, span1_limit_b_gpios);
+static const struct gpio_dt_spec span2_limit_a_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, span2_limit_a_gpios);
+static const struct gpio_dt_spec span2_limit_b_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, span2_limit_b_gpios);
+
+#define SPAN_LIMIT_STATE_1A (1 << 0)
+#define SPAN_LIMIT_STATE_1B (1 << 1)
+#define SPAN_LIMIT_STATE_2A (1 << 2)
+#define SPAN_LIMIT_STATE_2B (1 << 3)
+#define SPAN_LIMIT_STATE_RETRACTED (SPAN_LIMIT_STATE_1A | SPAN_LIMIT_STATE_2A)
+#define SPAN_LIMIT_STATE_EXTENDED (SPAN_LIMIT_STATE_1B | SPAN_LIMIT_STATE_2B)
+
+struct span_limit_data {
+    // These variables are guarded by span_state_sem
+    unsigned raw_state;
+    uint32_t raw_change_cycle;
+    unsigned state;
+};
+static struct span_limit_data span_limit_data;
+
+// This function must be called on every timer tick (before the cycle counter rolls over).
+static void span_limit_update_l(uint32_t cycle) {
+    gpio_port_value_t value = 0;
+    gpio_port_get(span1_limit_a_gpio.port, &value);
+    unsigned state =
+            ((value & BIT(span1_limit_a_gpio.pin)) ? SPAN_LIMIT_STATE_1A : 0) |
+            ((value & BIT(span1_limit_b_gpio.pin)) ? SPAN_LIMIT_STATE_1B : 0) |
+            ((value & BIT(span2_limit_a_gpio.pin)) ? SPAN_LIMIT_STATE_2A : 0) |
+            ((value & BIT(span2_limit_b_gpio.pin)) ? SPAN_LIMIT_STATE_2B : 0);
+    if (state != span_limit_data.raw_state) {
+        span_limit_data.raw_state = state;
+        span_limit_data.raw_change_cycle = cycle;
+    } else if (state != span_limit_data.state &&
+            cycle - span_limit_data.raw_change_cycle >= SPAN_LIMIT_DEBOUNCE_CYCLES) {
+        span_limit_data.state = state;
+    }
+}
+
+/*
+ * SPAN STEP SEQUENCER: Generates a limited number of step pulses at a specified rate.
  */
 
 static const struct device *span_stepper_dev = DEVICE_DT_GET(DT_NODELABEL(span_stepper));
 
-#define SPAN_STEP_TIMER_NUMBER 17
+#define SPAN_STEP_TIMER_NUMBER 16
 #define SPAN_STEP_TIMER_NODE DT_NODELABEL(_CONCAT(timers, SPAN_STEP_TIMER_NUMBER))
 #define SPAN_STEP_TIMER_CHANNEL LL_TIM_CHANNEL_CH1
-static TIM_TypeDef * const span_step_timer = _CONCAT(TIM, SPAN_STEP_TIMER_NUMBER);
+#define SPAN_STEP_TIMER _CONCAT(TIM, SPAN_STEP_TIMER_NUMBER)
+
 static const struct pwm_dt_spec span_step_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(span_step), 0);
 
 // The maximum and minimum step rate in pulses per second.
@@ -235,12 +280,12 @@ static struct span_step_data span_step_data;
 
 // Note: This timer ISR has elevated interrupt priority. Be quick.
 static void span_step_timer_isr(void *user_data) {
-    if (LL_TIM_IsActiveFlag_UPDATE(span_step_timer)) {
-        LL_TIM_ClearFlag_UPDATE(span_step_timer);
-        if (LL_TIM_CC_IsEnabledChannel(span_step_timer, SPAN_STEP_TIMER_CHANNEL)) {
+    if (LL_TIM_IsActiveFlag_UPDATE(SPAN_STEP_TIMER)) {
+        LL_TIM_ClearFlag_UPDATE(SPAN_STEP_TIMER);
+        if (LL_TIM_CC_IsEnabledChannel(SPAN_STEP_TIMER, SPAN_STEP_TIMER_CHANNEL)) {
             atomic_val_t value = atomic_dec(&span_step_data.steps_remaining);
             if (value <= 1) {
-                LL_TIM_CC_DisableChannel(span_step_timer, SPAN_STEP_TIMER_CHANNEL);
+                LL_TIM_CC_DisableChannel(SPAN_STEP_TIMER, SPAN_STEP_TIMER_CHANNEL);
             }
         }
     }
@@ -263,7 +308,7 @@ static int span_step_timer_init_l(void) {
         DT_IRQ(SPAN_STEP_TIMER_NODE, priority),
         span_step_timer_isr, NULL, 0);
     irq_enable(DT_IRQN(SPAN_STEP_TIMER_NODE));
-    LL_TIM_EnableIT_UPDATE(span_step_timer);
+    LL_TIM_EnableIT_UPDATE(SPAN_STEP_TIMER);
     return 0;
 }
 
@@ -298,13 +343,13 @@ static void span_step_set_travel_l(unsigned travel_total, unsigned travel_remain
 }
 
 static void span_step_update_steps_remaining_l(unsigned step_rate, unsigned travel_per_step) {
-    LL_TIM_DisableIT_UPDATE(span_step_timer);
+    LL_TIM_DisableIT_UPDATE(SPAN_STEP_TIMER);
     span_step_update_travel_l();
     span_step_data.step_rate = step_rate;
     span_step_data.travel_per_step = travel_per_step; // after getting travel remaining
     span_step_data.steps_remaining = span_step_data.travel_remaining / travel_per_step;
     atomic_set(&span_step_data.step_count, span_step_data.steps_remaining);
-    LL_TIM_EnableIT_UPDATE(span_step_timer);
+    LL_TIM_EnableIT_UPDATE(SPAN_STEP_TIMER);
 }
 
 static void span_step_async_complete_l(const struct device *dev, int result, void *user_data) {
@@ -355,7 +400,7 @@ static int span_step_halt_l() {
 }
 
 /*
- * STEP LOOP: Updates step velocity and handles faults.
+ * SPAN STEP LOOP: Updates step velocity and handles faults.
  */
 
 static const struct device *span_loop_tick_dev = DEVICE_DT_GET(DT_NODELABEL(span_loop_tick));
@@ -440,6 +485,7 @@ struct span_loop_data {
 static struct span_loop_data span_loop_data;
 
 static void span_loop_tick_handler(const struct device *dev, void *user_data) {
+    span_limit_update_l(k_cycle_get_32());
     k_sem_give(&span_loop_tick_sem);
 }
 
@@ -534,17 +580,48 @@ static void span_loop(void *, void *, void *) {
             goto give_state_sem_and_continue;
         }
 
+        // Get test parameters.
+        struct monitor_span_test span_test = monitor_get_span_test();
+
         // Update the speed.
         unsigned speed_target = 0;
         unsigned accel = 0;
         const struct span_move_spec *move_spec = span_loop_data.move_spec;
-        if (move_spec) {
-            accel = move_spec->accel;
-            if (travel_total >= move_spec->travel_slow_start &&
-                    travel_total + move_spec->travel_slow_stop <= move_spec->travel_total) {
-                speed_target = move_spec->speed_rapid;
-            } else {
+        if (span_test.test) {
+            speed_target = SPAN_MM_TO_TRAVEL(span_test.speed_mm_s);
+            accel = SPAN_MM_TO_TRAVEL(span_test.accel_mm_s2);
+            if (!span_loop_data.speed) {
+                span_loop_data.speed = speed_target / 2;
+            }
+        } else if (move_spec) {
+            // Set initial speed
+            if (!span_loop_data.speed) {
+                span_loop_data.speed = move_spec->speed_slow;
+            }
+            // Check whether limit has been reached
+            unsigned relevant_limits = span_limit_data.state &
+                    (span_loop_data.extend ? SPAN_LIMIT_STATE_EXTENDED : SPAN_LIMIT_STATE_RETRACTED);
+            if (span_loop_data.actuator[0].state <= SPAN_ACTUATOR_HALT
+                    && span_loop_data.actuator[1].state <= SPAN_ACTUATOR_HALT) {
+                relevant_limits &= ~(SPAN_LIMIT_STATE_1A | SPAN_LIMIT_STATE_1B);
+            }
+            if (span_loop_data.actuator[2].state <= SPAN_ACTUATOR_HALT
+                    && span_loop_data.actuator[3].state <= SPAN_ACTUATOR_HALT) {
+                relevant_limits &= ~(SPAN_LIMIT_STATE_2A | SPAN_LIMIT_STATE_2B);
+            }
+            if (relevant_limits && !SPAN_DEBUG_IGNORE_LIMITS) {
+                // Sharply reduce speed if the relevant limit has been reached
+                accel = 0;
                 speed_target = move_spec->speed_slow;
+            } else {
+                // Otherwise apply the acceleration curve and speed target based on travel distance
+                accel = move_spec->accel;
+                if (travel_total >= move_spec->travel_slow_start &&
+                        travel_total + move_spec->travel_slow_stop <= move_spec->travel_total) {
+                    speed_target = move_spec->speed_rapid;
+                } else {
+                    speed_target = move_spec->speed_slow;
+                }
             }
         }
         if (accel) {
@@ -557,6 +634,9 @@ static void span_loop(void *, void *, void *) {
             }
         } else {
             span_loop_data.speed = speed_target;
+        }
+        if (span_loop_data.speed < SPAN_MINIMUM_SPEED) {
+            span_loop_data.speed = SPAN_MINIMUM_SPEED;
         }
 
 #if SPAN_DEBUG_STALL_LEARN
@@ -644,7 +724,8 @@ static void span_loop(void *, void *, void *) {
 
         // Update the stall threshold if needed and issue the step requests.
         options.clear_fault = false;
-        err = drv8434s_set_stall_threshold(span_stepper_dev, &options, span_stall_threshold(speed));
+        err = drv8434s_set_stall_threshold(span_stepper_dev, &options,
+                span_test.test && span_test.stall_threshold ? span_test.stall_threshold : span_stall_threshold(speed));
         if (!err) {
             options.clear_fault = clear_transient_fault;
             err = span_step_async_l(pending_step_requests, step_rate, travel_per_step, &options, &pending_step_result);
@@ -666,6 +747,13 @@ static void span_loop(void *, void *, void *) {
 
         // Release the state semaphore when not awaiting an async callback.
     give_state_sem_and_continue:
+        struct monitor_span_debug debug = {
+            .speed = span_loop_data.speed,
+            .extend = span_loop_data.extend,
+            .limit_state = span_limit_data.state,
+        };
+        monitor_set_span_debug(debug);
+
         k_sem_give(&span_state_sem);
     }
 }
@@ -677,7 +765,7 @@ static void span_loop_init_l(const struct span_move_spec *move_spec, bool extend
     span_step_set_travel_l(0, move_spec->travel_total);
     span_loop_data.move_spec = move_spec;
     span_loop_data.extend = extend;
-    span_loop_data.speed = move_spec->speed_slow;
+    span_loop_data.speed = 0;
     for (unsigned i = 0; i < SPAN_NUM_ACTUATORS; i++) {
         span_loop_data.actuator[i].state = 
                 IS_BIT_SET(SPAN_DEBUG_DISABLED_ACTUATORS, i) ? SPAN_ACTUATOR_DISABLED :
@@ -718,12 +806,12 @@ static int span_loop_prepare_actuators_l(bool start, unsigned actuator_set, bool
     static bool actual_start;
     static unsigned actual_actuator_set;
 
-    int err;
     if (start) {
         if (!actual_start) {
-            if ((err = drv8434s_start(span_stepper_dev, SPAN_NUM_ACTUATORS))) {
+            if (drv8434s_start(span_stepper_dev, SPAN_NUM_ACTUATORS)) {
                 return SPAN_ERROR_DRIVER;
             }
+            power_5v_request(POWER_DEMAND_SPAN);
             actual_start = true;
         }
         if (actual_actuator_set != actuator_set || clear_fault) {
@@ -731,19 +819,18 @@ static int span_loop_prepare_actuators_l(bool start, unsigned actuator_set, bool
                 .status_buf = NULL,
                 .clear_fault = clear_fault,
             };
-            if ((err = drv8434s_set_output_enable(span_stepper_dev, &options, actuator_set))) {
+            if (drv8434s_set_output_enable(span_stepper_dev, &options, actuator_set)) {
                 return SPAN_ERROR_DRIVER;
             }
             actual_actuator_set = actuator_set;
         }
-        counter_start(span_loop_tick_dev); // never fails
     } else {
         span_step_halt_l();
-        counter_stop(span_loop_tick_dev); // never fails
         if (actual_start) {
-            if ((err = drv8434s_stop(span_stepper_dev))) {
+            if (drv8434s_stop(span_stepper_dev)) {
                 return SPAN_ERROR_DRIVER;
             }
+            power_5v_release(POWER_DEMAND_SPAN);
             actual_start = false;
         }
     }
@@ -770,12 +857,11 @@ static bool span_loop_check_states_l(int expected_loop_state, int expected_actua
 enum span_action_state {
     SPAN_ACTION_ABORT = -1,
     SPAN_ACTION_SLEEP_DONE = 0,
-    SPAN_ACTION_STANDBY_DONE = 1,
-    SPAN_ACTION_HOME_TRAVEL = 2,
-    SPAN_ACTION_HOME_RELIEF = 3,
-    SPAN_ACTION_HOME_DONE = 4,
-    SPAN_ACTION_JOG_TRAVEL = 5,
-    SPAN_ACTION_JOG_DONE = 6,
+    SPAN_ACTION_HOME_TRAVEL = 1,
+    SPAN_ACTION_HOME_RELIEF = 2,
+    SPAN_ACTION_HOME_DONE = 3,
+    SPAN_ACTION_JOG_TRAVEL = 4,
+    SPAN_ACTION_JOG_DONE = 5,
 };
 static enum span_action_state span_action_state; // not guarded by semaphore
 
@@ -783,6 +869,22 @@ static enum span_position span_position; // not guarded by semaphore
 
 int span_init(void) {
     int err;
+    const struct device *span_limit_port = span1_limit_a_gpio.port;
+    if (!device_is_ready(span_limit_port)) {
+        return -ENODEV;
+    }
+    if (span_limit_port != span1_limit_b_gpio.port ||
+            span_limit_port != span2_limit_a_gpio.port ||
+            span_limit_port != span2_limit_b_gpio.port) {
+        return -EIO;
+    }
+    if ((err = gpio_pin_configure_dt(&span1_limit_a_gpio, GPIO_INPUT)) ||
+            (err = gpio_pin_configure_dt(&span1_limit_b_gpio, GPIO_INPUT)) ||
+            (err = gpio_pin_configure_dt(&span2_limit_a_gpio, GPIO_INPUT)) ||
+            (err = gpio_pin_configure_dt(&span2_limit_b_gpio, GPIO_INPUT))) {
+        return err;
+    }
+
     if ((err = span_step_timer_init_l())) {
         return err;
     }
@@ -796,6 +898,7 @@ int span_init(void) {
     if ((err = counter_set_top_value(span_loop_tick_dev, &cfg))) {
         return err;
     }
+    counter_start(span_loop_tick_dev);
 
     span_action_state = SPAN_ACTION_SLEEP_DONE;
     span_position = SPAN_POSITION_UNKNOWN;
@@ -848,26 +951,6 @@ int span_poll_sleep(void) {
         goto give_state_sem_and_return;
     }
     span_action_state = SPAN_ACTION_SLEEP_DONE;
-
-give_state_sem_and_return:
-    k_sem_give(&span_state_sem);
-    return err;
-}
-
-int span_poll_standby(void) {
-    if (span_action_state == SPAN_ACTION_STANDBY_DONE) {
-        return 0;
-    }
-
-    int err;
-    k_sem_take(&span_state_sem, K_FOREVER);
-
-    span_loop_halt_l();
-    if ((err = span_loop_prepare_actuators_l(true, 0, true))) {
-        span_action_state = SPAN_ACTION_ABORT;
-        goto give_state_sem_and_return;
-    }
-    span_action_state = SPAN_ACTION_STANDBY_DONE;
 
 give_state_sem_and_return:
     k_sem_give(&span_state_sem);
@@ -928,7 +1011,15 @@ static int span_poll_home(bool extend) {
         }
         span_loop_halt_l();
         span_action_state = SPAN_ACTION_HOME_DONE;
-        span_position = extend ? SPAN_POSITION_EXTENDED : SPAN_POSITION_RETRACTED;
+        if (extend && (span_limit_data.state == SPAN_LIMIT_STATE_EXTENDED || SPAN_DEBUG_IGNORE_LIMITS)) {
+            span_position = SPAN_POSITION_EXTENDED;
+        } else if (!extend && (span_limit_data.state == SPAN_LIMIT_STATE_RETRACTED || SPAN_DEBUG_IGNORE_LIMITS)) {
+            span_position = SPAN_POSITION_RETRACTED;
+        } else {
+            span_action_state = SPAN_ACTION_ABORT;
+            err = SPAN_ERROR_NOT_HOME;
+            goto give_state_sem_and_return;
+        }
     }
     err = 0; // done
 

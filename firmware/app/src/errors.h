@@ -11,12 +11,15 @@
 #define ERROR_CATEGORY(err) (-(err) >> 3)
 #define ERROR_INDEX(err) ((-(err) & 7) + 1)
 
+// MAGENTA
 #define CONTROL_ERROR_FIRST_ (-248)
 #define CONTROL_ERROR_INHIBITED (CONTROL_ERROR_FIRST_)  /* Movement of the bed has been remotely inhibited. */
 
+// AMBER
 #define BED_ERROR_FIRST_ (-240)
 #define BED_ERROR_BAD_STATE (BED_ERROR_FIRST_)  /* The bed components are in an unknown or unexpected state. */
 
+// BLUE
 #define SPAN_ERROR_FIRST_ (-232)
 #define SPAN_ERROR_FAULT (SPAN_ERROR_FIRST_)          /* Motor driver reported a fault. */
 #define SPAN_ERROR_DESYNC (SPAN_ERROR_FIRST_ - 1)     /* The actuators lost synchronization. */
@@ -25,6 +28,7 @@
 #define SPAN_ERROR_NOT_HOME (SPAN_ERROR_FIRST_ - 4)   /* The actuators did not stall at their home position as expected. */
 #define SPAN_ERROR_NOT_TRAVEL (SPAN_ERROR_FIRST_ - 5) /* The actuators failed to travel the expected distance without stalling. */
 
+// CYAN
 #define LIFT_ERROR_FIRST_ (-224)
 #define LIFT_ERROR_FAULT (LIFT_ERROR_FIRST_)       /* Motor driver reported a fault. */
 #define LIFT_ERROR_DESYNC (LIFT_ERROR_FIRST_ - 1)  /* The actuators lost synchronization. */

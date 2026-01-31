@@ -10,6 +10,7 @@
 static const struct pwm_dt_spec red_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(indicator_status), 0);
 static const struct pwm_dt_spec green_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(indicator_status), 1);
 static const struct pwm_dt_spec blue_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(indicator_status), 2);
+static const struct pwm_dt_spec power_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(indicator_power), 0);
 
 K_SEM_DEFINE(indicator_sem, 1, 1);
 
@@ -26,12 +27,14 @@ K_WORK_DELAYABLE_DEFINE(indicator_pattern_work, indicator_pattern_handler);
 #define INDICATOR_RED_SCALE (20)
 #define INDICATOR_GREEN_SCALE (8)
 #define INDICATOR_BLUE_SCALE (12)
+#define INDICATOR_POWER_SCALE (32)
 #define INDICATOR_SCALE_BITS (6)
 
 static void indicator_pwm_set_off_l() {
     pwm_set_pulse_dt(&red_pwm, 0);
     pwm_set_pulse_dt(&green_pwm, 0);
     pwm_set_pulse_dt(&blue_pwm, 0);
+    pwm_set_pulse_dt(&power_pwm, 0);
 }
 
 static void indicator_pwm_set_on_l(unsigned hue) {
@@ -69,25 +72,10 @@ static void indicator_pwm_set_on_l(unsigned hue) {
     pwm_set_pulse_dt(&red_pwm, (((r * red_pwm.period) >> 8) * INDICATOR_RED_SCALE) >> INDICATOR_SCALE_BITS);
     pwm_set_pulse_dt(&green_pwm, (((g * green_pwm.period) >> 8) * INDICATOR_GREEN_SCALE) >> INDICATOR_SCALE_BITS);
     pwm_set_pulse_dt(&blue_pwm, (((b * blue_pwm.period) >> 8) * INDICATOR_BLUE_SCALE) >> INDICATOR_SCALE_BITS);
+    pwm_set_pulse_dt(&power_pwm, (power_pwm.period * INDICATOR_POWER_SCALE) >> INDICATOR_SCALE_BITS);
 }
 
-void indicator_off() {
-    k_sem_take(&indicator_sem, K_FOREVER);
-    indicator_pattern_current = NULL;
-    indicator_pattern_on = false;
-    indicator_pwm_set_off_l();
-    k_sem_give(&indicator_sem);
-}
-
-void indicator_on(unsigned hue) {
-    k_sem_take(&indicator_sem, K_FOREVER);
-    indicator_pattern_current = NULL;
-    indicator_pattern_on = false;
-    indicator_pwm_set_on_l(hue);
-    k_sem_give(&indicator_sem);
-}
-
-void indicator_pattern_advance_l() {
+static void indicator_pattern_advance_l(void) {
     for (;;) {
         const struct indicator_pattern_entry *entry = &indicator_pattern_current[indicator_pattern_index];
         if (!indicator_pattern_on) {
@@ -130,6 +118,22 @@ static void indicator_pattern_handler(struct k_work* work) {
     } else if (indicator_pattern_on) {
         indicator_pwm_set_off_l();
     }
+    k_sem_give(&indicator_sem);
+}
+
+void indicator_off(void) {
+    k_sem_take(&indicator_sem, K_FOREVER);
+    indicator_pattern_current = NULL;
+    indicator_pattern_on = false;
+    indicator_pwm_set_off_l();
+    k_sem_give(&indicator_sem);
+}
+
+void indicator_on(unsigned hue) {
+    k_sem_take(&indicator_sem, K_FOREVER);
+    indicator_pattern_current = NULL;
+    indicator_pattern_on = false;
+    indicator_pwm_set_on_l(hue);
     k_sem_give(&indicator_sem);
 }
 

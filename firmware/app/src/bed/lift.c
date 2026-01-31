@@ -23,15 +23,23 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <stm32c0xx_hal.h>
+#include <stm32c0xx_ll_gpio.h>
+#include <stm32c0xx_ll_tim.h>
 #include <zephyr/drivers/counter.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/spinlock.h>
 #include <zephyr/sys/atomic.h>
 
 #include "bed/lift.h"
 #include "fixed_point.h"
+#include "monitor.h"
+#include "power.h"
+
+LOG_MODULE_REGISTER(lift);
 
 // If defined, pretend the lift limit switches are reporting the specified state.
 // Useful for testing the span actuators while the limit switches have been disconnected.
@@ -44,7 +52,7 @@
 
 // Spin lock for the limit and hall sensor state.
 // Functions that require holding this spinlock have the `_l` suffix.
-struct k_spinlock lift_lock;
+static struct k_spinlock lift_lock;
 
 /*
  * LIFT LIMIT SWITCHES
@@ -59,9 +67,9 @@ static const struct gpio_dt_spec lift_limit_b_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USE
 
 enum lift_limit_state {
     LIFT_LIMIT_BELOW_SAFE_ZONE = 0b11,
-    LIFT_LIMIT_IN_SAFE_ZONE = 0b01,
+    LIFT_LIMIT_IN_SAFE_ZONE = 0b10,
     LIFT_LIMIT_ABOVE_SAFE_ZONE = 0b00,
-    LIFT_LIMIT_ABOVE_CEILING = 0b10,
+    LIFT_LIMIT_ABOVE_CEILING = 0b01,
 };
 
 struct lift_limit_data {
@@ -77,8 +85,8 @@ static void lift_limit_update_l(uint32_t cycle) {
     gpio_port_value_t value = 0;
     gpio_port_get(lift_limit_a_gpio.port, &value);
     enum lift_limit_state state =
-            ((value & BIT(lift_limit_a_gpio.pin)) ? 0b10 : 0) |
-            ((value & BIT(lift_limit_b_gpio.pin)) ? 0b01 : 0);
+            ((value & BIT(lift_limit_a_gpio.pin)) ? 0b01 : 0) |
+            ((value & BIT(lift_limit_b_gpio.pin)) ? 0b10 : 0);
     if (state != lift_limit_data.raw_state) {
         lift_limit_data.raw_state = state;
         lift_limit_data.raw_change_cycle = cycle;
@@ -179,6 +187,12 @@ static void lift_hall_update_l(struct lift_hall_data *data, uint32_t cycle, bool
  */
 
 static const struct gpio_dt_spec lift_fault_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, lift_fault_gpios);
+static const struct gpio_dt_spec lift_sleep_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, lift_sleep_gpios);
+
+#define LIFT_IN_TIMER_NUMBER 1
+#define LIFT_IN_TIMER_NODE DT_NODELABEL(_CONCAT(timers, LIFT_IN_TIMER_NUMBER))
+#define LIFT_IN_TIMER _CONCAT(TIM, LIFT_IN_TIMER_NUMBER)
+
 static const struct pwm_dt_spec lift1_in1_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(lift1_in1), 0);
 static const struct pwm_dt_spec lift1_in2_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(lift1_in2), 0);
 static const struct pwm_dt_spec lift2_in1_pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(lift2_in1), 0);
@@ -395,6 +409,13 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
     exit_spinlock:
         lift1_duty = lift_loop_data.lift1_duty;
         lift2_duty = lift_loop_data.lift2_duty;
+
+        struct monitor_lift_debug debug = {
+            .lift1_duty = lift1_duty >> 4,
+            .lift2_duty = lift2_duty >> 4,
+            .limit_state = lift_limit_data.state,
+        };
+        monitor_set_lift_debug(debug);
     }
 
     // Update the motor PWM.
@@ -466,28 +487,78 @@ static void lift_loop_feed_l(void) {
 
 enum lift_action_state {
     LIFT_ACTION_ABORT = -1,
-    LIFT_ACTION_STANDBY_DONE = 0,
+    LIFT_ACTION_SLEEP_DONE = 0,
+    LIFT_ACTION_MOVE_PREPARE = 1,
     LIFT_ACTION_MOVE_TRAVEL = 2,
     LIFT_ACTION_MOVE_DONE = 3,
 };
 static enum lift_action_state lift_action_state; // not guarded by semaphore
 
+// Lift prepare cycles.
+// Allow the driver some time to initialize itself and also pause between changes in direction.
+#define LIFT_PREPARE_MS (50)
+#define LIFT_PREPARE_CYCLES (uint32_t)((uint64_t)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC * LIFT_PREPARE_MS / 1000)
+static uint32_t lift_prepare_start_cycle;
+
+static void lift_timer_break_init(void) {
+    // Prevent the lift from moving when a fault occurs.
+    // The BRK2 function can only be used with OSSI = 1 and OSSR = 1.  When the break is triggered, the timer drives
+    // each output to its inactive state as determined by the output polarity.  Because the devicetree sets the polarity
+    // to PWM_POLARITY_INVERTED, inactive outputs will go high, and engage the DRV8874 motor brake function.
+    _Static_assert(IS_TIM_BREAK_INSTANCE(LIFT_IN_TIMER));
+    LL_TIM_OC_SetIdleState(LIFT_IN_TIMER, LL_TIM_CHANNEL_CH1, LL_TIM_OCIDLESTATE_LOW);
+    LL_TIM_OC_SetIdleState(LIFT_IN_TIMER, LL_TIM_CHANNEL_CH2, LL_TIM_OCIDLESTATE_LOW);
+    LL_TIM_OC_SetIdleState(LIFT_IN_TIMER, LL_TIM_CHANNEL_CH3, LL_TIM_OCIDLESTATE_LOW);
+    LL_TIM_OC_SetIdleState(LIFT_IN_TIMER, LL_TIM_CHANNEL_CH4, LL_TIM_OCIDLESTATE_LOW);
+    LL_TIM_SetOffStates(LIFT_IN_TIMER, LL_TIM_OSSI_ENABLE, LL_TIM_OSSR_ENABLE);
+    LL_TIM_DisableAutomaticOutput(LIFT_IN_TIMER);
+    // Break on system faults and ignore the BKIN input
+    LL_TIM_DisableBreakInputSource(LIFT_IN_TIMER, LL_TIM_BREAK_INPUT_BKIN, LL_TIM_BKIN_SOURCE_BKIN);
+    LL_TIM_ConfigBRK(LIFT_IN_TIMER, LL_TIM_BREAK_POLARITY_HIGH, LL_TIM_BREAK_FILTER_FDIV1, LL_TIM_BREAK_AFMODE_INPUT);
+    LL_TIM_EnableBRK(LIFT_IN_TIMER);
+    // Break when the BK2IN input is active (lift fault pin)
+    // The GPIO driver overrides the pin mode so we restore it here.
+    LL_GPIO_SetAFPin_8_15(GPIOC, LL_GPIO_PIN_14, LL_GPIO_AF_2);
+    LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_14, LL_GPIO_MODE_ALTERNATE);
+    LL_TIM_SetBreakInputSourcePolarity(LIFT_IN_TIMER, LL_TIM_BREAK_INPUT_BKIN2, LL_TIM_BKIN_SOURCE_BKIN, LL_TIM_BKIN_POLARITY_LOW);
+    LL_TIM_EnableBreakInputSource(LIFT_IN_TIMER, LL_TIM_BREAK_INPUT_BKIN2, LL_TIM_BKIN_SOURCE_BKIN);
+    LL_TIM_ConfigBRK2(LIFT_IN_TIMER, LL_TIM_BREAK2_POLARITY_HIGH, LL_TIM_BREAK2_FILTER_FDIV1_N8, LL_TIM_BREAK2_AFMODE_INPUT);
+    LL_TIM_EnableBRK2(LIFT_IN_TIMER);
+
+    // Prevent the lift from moving while the debugger is stopped at a breakpoint.
+    _CONCAT(__HAL_DBGMCU_FREEZE_TIM, LIFT_IN_TIMER_NUMBER)();
+}
+
+static void lift_timer_break_reset(void) {
+    // The break input is asserted transiently for a moment after the motor drivers are enabled.
+    // Wait for the drivers to be prepared before calling this function otherwise there is a race.
+#if 0
+    LOG_INF("Reset TIM1BK2: AF=%d, MODER=%d, MOE=%d",
+            LL_GPIO_GetAFPin_8_15(GPIOC, LL_GPIO_PIN_14),
+            LL_GPIO_GetPinMode(GPIOC, LL_GPIO_PIN_14),
+            LL_TIM_IsEnabledAllOutputs(LIFT_IN_TIMER));
+#endif
+    LL_TIM_EnableAllOutputs(LIFT_IN_TIMER); // must re-enable outputs after break triggered
+}
+
 int lift_init(void) {
     int err;
     const struct device *lift_fault_port = lift_fault_gpio.port;
+    const struct device *lift_sleep_port = lift_sleep_gpio.port;
     const struct device *lift_limit_port = lift_limit_a_gpio.port;
     const struct device *lift1_hall_port = lift1_hall1_gpio.port;
     const struct device *lift2_hall_port = lift2_hall1_gpio.port;
     const struct device *lift_in_dev = lift1_in1_pwm.dev;
     const uint32_t lift_in_period_ns = lift1_in1_pwm.period;
     if (!device_is_ready(lift_fault_port) ||
+            !device_is_ready(lift_sleep_port) ||
             !device_is_ready(lift_limit_port) ||
             !device_is_ready(lift1_hall_port) ||
             !device_is_ready(lift2_hall_port) ||
             !device_is_ready(lift_in_dev)) {
         return -ENODEV;
     }
-    if (lift_limit_port != lift_limit_a_gpio.port ||
+    if (lift_limit_port != lift_limit_b_gpio.port ||
             lift1_hall_port != lift1_hall2_gpio.port ||
             lift2_hall_port != lift2_hall2_gpio.port ||
             lift1_in2_pwm.dev != lift_in_dev || lift1_in2_pwm.period != lift_in_period_ns ||
@@ -496,7 +567,9 @@ int lift_init(void) {
         return -EIO;
     }
 
-    if ((err = gpio_pin_configure_dt(&lift_limit_a_gpio, GPIO_INPUT)) ||
+    if ((err = gpio_pin_configure_dt(&lift_fault_gpio, GPIO_INPUT)) ||
+            (err = gpio_pin_configure_dt(&lift_sleep_gpio, GPIO_OUTPUT_ACTIVE)) ||
+            (err = gpio_pin_configure_dt(&lift_limit_a_gpio, GPIO_INPUT)) ||
             (err = gpio_pin_configure_dt(&lift_limit_b_gpio, GPIO_INPUT)) ||
             (err = gpio_pin_configure_dt(&lift1_hall1_gpio, GPIO_INPUT)) ||
             (err = gpio_pin_configure_dt(&lift1_hall2_gpio, GPIO_INPUT)) ||
@@ -522,6 +595,8 @@ int lift_init(void) {
             (err = gpio_add_callback(lift2_hall_port, &lift2_hall_data.gpio_callback))) {
         return err;
     }
+
+    lift_timer_break_init();
 
     uint64_t lift_in_clock_rate;
     if ((err = pwm_get_cycles_per_sec(lift_in_dev, lift1_in1_pwm.channel, &lift_in_clock_rate))) {
@@ -571,15 +646,17 @@ enum lift_state lift_get_state(void) {
     return result;
 }
 
-int lift_poll_standby(void) {
-    if (lift_action_state == LIFT_ACTION_STANDBY_DONE) {
+int lift_poll_sleep(void) {
+    if (lift_action_state == LIFT_ACTION_SLEEP_DONE) {
         return 0;
     }
 
     K_SPINLOCK(&lift_lock) {
         lift_loop_halt_l();
     }
-    lift_action_state = LIFT_ACTION_STANDBY_DONE;
+    gpio_pin_set_dt(&lift_sleep_gpio, true);
+    power_5v_release(POWER_DEMAND_LIFT);
+    lift_action_state = LIFT_ACTION_SLEEP_DONE;
     return 0;
 }
 
@@ -612,7 +689,19 @@ static int lift_poll_move(enum lift_move move, bool raise, bool jog) {
 
     int err;
     K_SPINLOCK(&lift_lock) {
-        if (lift_action_state != LIFT_ACTION_MOVE_TRAVEL) {
+        if (lift_action_state != LIFT_ACTION_MOVE_PREPARE && lift_action_state != LIFT_ACTION_MOVE_TRAVEL) {
+            power_5v_request(POWER_DEMAND_LIFT);
+            gpio_pin_set_dt(&lift_sleep_gpio, false);
+            lift_loop_halt_l();
+            lift_action_state = LIFT_ACTION_MOVE_PREPARE;
+            lift_prepare_start_cycle = k_cycle_get_32();
+        }
+        if (lift_action_state == LIFT_ACTION_MOVE_PREPARE) {
+            if (k_cycle_get_32() - lift_prepare_start_cycle < LIFT_PREPARE_CYCLES) {
+                err = 1; // wait for time to elapse
+                K_SPINLOCK_BREAK;
+            }
+            lift_timer_break_reset();
             if (jog) {
                 lift_hall_reset_origin_l();
             }

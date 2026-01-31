@@ -43,9 +43,9 @@ enum lift_state lift_get_state(void);
  */
 
 /**
- * @brief Maintain current position.
+ * @brief Stop the lift actuators and put the motor drivers to sleep.
  */
-int lift_poll_standby(void);
+int lift_poll_sleep(void);
 
 /**
  * @brief Raise the lift until the upper limit position is achieved.

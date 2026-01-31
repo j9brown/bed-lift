@@ -52,3 +52,11 @@ int bed_poll_stop(void);
  * @brief Move the bed into the specified pose.
  */
 int bed_poll_pose(enum bed_pose pose);
+
+/**
+ * @brief Prepare for a manual jog and clear the current pose.
+ *
+ * Should be followed by calls to the span and lift functions to jog the actuators
+ * or put them to sleep.
+ */
+void bed_prepare_for_manual_action(void);

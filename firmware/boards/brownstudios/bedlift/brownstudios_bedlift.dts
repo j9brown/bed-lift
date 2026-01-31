@@ -12,49 +12,65 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,console = &usart1;
-		zephyr,shell-uart = &usart1;
 	};
 
 	zephyr,user {
-		control-up-gpios = <&gpiob 8 GPIO_ACTIVE_LOW>;
-		control-down-gpios = <&gpiob 9 GPIO_ACTIVE_LOW>;
-		lift-fault-gpios = <&gpioa 15 GPIO_ACTIVE_LOW>;
-		lift-limit-a-gpios = <&gpiob 5 GPIO_ACTIVE_LOW>;
-		lift-limit-b-gpios = <&gpiob 4 GPIO_ACTIVE_LOW>;
-		lift1-hall1-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+		power-5v-en-gpios = <&gpiof 3 GPIO_ACTIVE_HIGH>;
+
+		control-down-gpios = <&gpiob 14 GPIO_ACTIVE_LOW>;
+		control-up-gpios = <&gpiob 15 GPIO_ACTIVE_LOW>;
+
+		lift-fault-gpios = <&gpioc 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		lift-sleep-gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
+		lift-limit-a-gpios = <&gpiof 0 GPIO_ACTIVE_LOW>;
+		lift-limit-b-gpios = <&gpiof 1 GPIO_ACTIVE_LOW>;
+		lift1-hall1-gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
 		lift1-hall2-gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
-		lift2-hall1-gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
-		lift2-hall2-gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
+		lift2-hall1-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+		lift2-hall2-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+
+		span1-limit-a-gpios = <&gpiod 0 GPIO_ACTIVE_LOW>;
+		span1-limit-b-gpios = <&gpiod 1 GPIO_ACTIVE_LOW>;
+		span2-limit-a-gpios = <&gpiod 2 GPIO_ACTIVE_LOW>;
+		span2-limit-b-gpios = <&gpiod 3 GPIO_ACTIVE_LOW>;
 	};
 
 	pwm_set {
 		compatible = "pwm-set";
 
 		span_step: span_step { /* frequency varies at runtime */
-			pwms = <&pwm17 1 0 PWM_POLARITY_NORMAL>;
+			pwms = <&span_step_pwm 1 0 PWM_POLARITY_NORMAL>;
 		};
 
 		/* polarity inverted to facilitate use of slow decay mode */
 		lift1_in1: lift1_in1 {
-			pwms = <&pwm3 3 PWM_USEC(40) PWM_POLARITY_INVERTED>;
+			pwms = <&lift_pwm 1 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 		lift1_in2: lift1_in2 {
-			pwms = <&pwm3 2 PWM_USEC(40) PWM_POLARITY_INVERTED>;
+			pwms = <&lift_pwm 2 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 		lift2_in1: lift2_in1 {
-			pwms = <&pwm3 1 PWM_USEC(40) PWM_POLARITY_INVERTED>;
+			pwms = <&lift_pwm 3 PWM_USEC(40) PWM_POLARITY_INVERTED>;
 		};
 		lift2_in2: lift2_in2 {
-			pwms = <&pwm3 4 PWM_USEC(40) PWM_POLARITY_INVERTED>;
+			pwms = <&lift_pwm 4 PWM_USEC(40) PWM_POLARITY_INVERTED>;
+		};
+
+		indicator_power: indicator_power {
+			pwms = <&indicator_pwm 4 PWM_USEC(1000) PWM_POLARITY_INVERTED>;
+		};
+
+		sound: sound {
+			pwms = <&sound_pwm 1 PWM_USEC(40) PWM_POLARITY_NORMAL>;
 		};
 	};
 
 	indicator_status: indicator_status {
 		compatible = "color-indicator";
 
-		pwms = <&pwm1 1 PWM_USEC(1000) PWM_POLARITY_NORMAL>,
-			<&pwm1 2 PWM_USEC(1000) PWM_POLARITY_NORMAL>,
-			<&pwm1 3 PWM_USEC(1000) PWM_POLARITY_NORMAL>;
+		pwms = <&indicator_pwm 1 PWM_USEC(1000) PWM_POLARITY_NORMAL>,
+			<&indicator_pwm 2 PWM_USEC(1000) PWM_POLARITY_NORMAL>,
+			<&indicator_pwm 3 PWM_USEC(1000) PWM_POLARITY_NORMAL>;
 	};
 };
 
@@ -65,48 +81,47 @@
 &rcc {
 	clocks = <&clk_hsi>;
 	clock-frequency = <DT_FREQ_M(48)>;
-	ahb-prescaler = <1>;
-	apb1-prescaler = <4>;
+	ahb-prescaler = <1>;  /* AHB clock at 48 MHz for the CPU core */
+	apb1-prescaler = <2>; /* APB clock at 24 MHz for peripherals, TIM clock will be 2x APB so 48 MHz */
 };
 
 &exti {
 	/* An interrupt decodes quadrature pulses from the lift hall sensors and must capture both edges
 	 * of jitter pulses on the order of microseconds to track position.
-	 * TODO: Change the hardware so the hall sensor inputs are on EXTI0-1 and EXTI2-3 with higher priority
-	 *       then lower the priority of EXTI4-15. Unfortunately the pins are scattered across all EXTI lines.
-	 * Requires elevated priority. */
-	interrupts = <5 2>, <6 2>, <7 2>;
+	 * Set elevated priority for EXTI0-1 and EXTI2-3.  Leave EXTI4-15 at low priority.
+	 */
+	interrupts = <5 2>, <6 2>, <7 0>;
 };
 
 &timers1 {
-	/* Divide the 24 MHz clock by 0+1 for timing 1000 Hz LED PWM. */
+	/* Divide the 48 MHz TIM clock by 1 (0+1) for timing 25000 Hz lift actuator PWM. */
 	st,prescaler = <0>;
 	status = "okay";
 
-	pwm1: pwm {
-		/* red, green, blue */
-		pinctrl-0 = <&tim1_ch1_pa0>, <&tim1_ch2_pa1>, <&tim1_ch3_pa2>;
+	lift_pwm: pwm {
+		/* lift2_in1, lift1_in2, lift1_in1, lift2_in2, lift_fault */
+		pinctrl-0 = <&tim1_ch1_pa0>, <&tim1_ch2_pa1>, <&tim1_ch3_pa2>, <&tim1_ch4_pa3>, <&tim1_bkin2_pc14>;
 		pinctrl-names = "default";
 		status = "okay";
 	};
 };
 
 &timers3 {
-	/* Divide the 24 MHz clock by 0+1 for timing 25000 Hz lift actuator PWM. */
-	st,prescaler = <0>;
+	/* Divide the 48 MHz TIM clock by 2 (1+1) for timing 1000 Hz LED PWM. */
+	st,prescaler = <1>;
 	status = "okay";
 
-	pwm3: pwm {
-		/* lift2_in1, lift1_in2, lift1_in1, lift2_in2 */
-		pinctrl-0 = <&tim3_ch1_pc6>, <&tim3_ch2_pb3>, <&tim3_ch3_pb0>, <&tim3_ch4_pa8>;
+	indicator_pwm: pwm {
+		/* red, green, blue */
+		pinctrl-0 = <&tim3_ch1_pc6>, <&tim3_ch2_pc7>, <&tim3_ch3_pc15>, <&tim3_ch4_pa8>;
 		pinctrl-names = "default";
 		status = "okay";
 	};
 };
 
-&timers14 {
-	/* Divide the 24 MHz clock by 7+1 for timing 100 Hz span loop ticks. */
-	st,prescaler = <7>;
+&timers2 {
+	/* Divide the 48 MHz TIM clock by 16 (15+1) for timing 100 Hz span loop ticks. */
+	st,prescaler = <15>;
 	status = "okay";
 
     span_loop_tick: counter {
@@ -115,11 +130,12 @@
 	};
 };
 
-&timers16 {
-	/* Divide the 24 MHz clock by 7+1 for timing 100 Hz lift loop ticks.
+&timers14 {
+	/* Divide the 48 MHz TIM clock by 16 (15+1) for timing 100 Hz lift loop ticks.
 	 * We could perhaps share this responsibility with the other timer but we have the hardware
-	 * resources available and it's simpler to keep the loops decoupled. */
-	st,prescaler = <7>;
+	 * resources available and it's simpler to keep the loops decoupled.
+	 */
+	st,prescaler = <15>;
 	status = "okay";
 
     lift_loop_tick: counter {
@@ -128,17 +144,30 @@
 	};
 };
 
-&timers17 {
-	/* Divide the 24 MHz clock by 3+1 for timing 100 to 25000 Hz span actuator step pulses. */
-	st,prescaler = <3>;
+&timers16 {
+	/* Divide the 48 MHz clock by 8 (7+1) for timing 100 to 25000 Hz span actuator step pulses. */
+	st,prescaler = <7>;
 	status = "okay";
 
 	/* An interrupt counts every step to track actuator position at high speed.
-	 * Requires elevated priority. */
-	interrupts = <22 2>;
+	 * Requires elevated priority to avoid dropping steps.
+	 */
+	interrupts = <21 2>;
 
-	pwm17: pwm {
-		pinctrl-0 = <&tim17_ch1_pc14>;
+	span_step_pwm: pwm {
+		pinctrl-0 = <&tim16_ch1_pb8>;
+		pinctrl-names = "default";
+		status = "okay";
+	};
+};
+
+&timers17 {
+	/* Divide the 48 MHz clock by 8 (7+1) for timing 100 to 25000 Hz audible feedback tones. */
+	st,prescaler = <7>;
+	status = "okay";
+
+	sound_pwm: pwm {
+		pinctrl-0 = <&tim17_ch1_pb9>;
 		pinctrl-names = "default";
 		status = "okay";
 	};
@@ -151,10 +180,16 @@
 	status = "okay";
 };
 
-&spi1 {
-	pinctrl-0 = <&spi1_sck_pa5>, <&spi1_miso_pa6>, <&spi1_mosi_pa7>;
+&i2c2 {
+	pinctrl-0 = <&i2c2_scl_pb10>, <&i2c2_sda_pb11>;
 	pinctrl-names = "default";
-	cs-gpios = <&gpioc 15 GPIO_ACTIVE_LOW>;
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	status = "okay";
+};
+
+&spi1 {
+	pinctrl-0 = <&spi1_nss_pa4>, <&spi1_sck_pa5>, <&spi1_miso_pa6>, <&spi1_mosi_pa7>;
+	pinctrl-names = "default";
 	status = "okay";
 
 #if USE_SPI_DMA
@@ -173,25 +208,29 @@
 		spi-cs-hold-delay-ns = <50>;
 
 		num-devices = <4>;
-		fault-gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
-		sleep-gpios = <&gpioa 3 GPIO_ACTIVE_LOW>;
+		fault-gpios = <&gpiob 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+		sleep-gpios = <&gpiob 4 GPIO_ACTIVE_LOW>;
 
 		/* Current limit setting
-		 *   4: 1.7 A
-		 *   5: 1.4 A, circuit board very hot under the drv8434s chip
-		 *   6: 1.2 A
-		 *   7: 1.0 A
-		 *   8: 0.8 A
+	     *   0: 100%,   2.50 A peak
+		 *   1: 93.75%, 2.34 A peak
+		 *   2: 87.5%,  2.19 A peak
+		 *   3: 81.25%, 2.03 A peak
+		 *   4: 75%,    1.88 A peak, 1.33 A rms
+		 *   5: 68.75%, 1.72 A peak
+		 *   6: 62.5%,  1.56 A peak
+		 *   7: 56.25%, 1.41 A peak
+		 *   8: 50%,    1.25 A peak
 		 */
-		trq-dac = <8>;
+		trq-dac = <4>;
 	};
 };
 
 &usart1 {
 	pinctrl-0 = <&usart1_tx_pa9>, <&usart1_rx_pa10>;
 	pinctrl-names = "default";
-	current-speed = <115200>;
-	/* status = "okay"; */
+	current-speed = <1000000>;
+	status = "okay";
 };
 
 &iwdg {

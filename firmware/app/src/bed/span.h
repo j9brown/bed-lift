@@ -44,14 +44,6 @@ enum span_state span_get_state(void);
 int span_poll_sleep(void);
 
 /**
- * @brief Wake the motor drivers from sleep and keep the outputs disabled.
- *
- * Because the lift and span drivers share the same sleep signal, this state can be used to keep
- * the span drivers on standby while the lift moves.
- */
-int span_poll_standby(void);
-
-/**
  * @brief Extend all spans until all of the actuators stall at the endstop.
  */
 int span_poll_extend(void);
