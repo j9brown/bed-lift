@@ -66,7 +66,7 @@ LOG_MODULE_REGISTER(span);
 #define SPAN_DEBUG_STALL_DETECTION_DISABLED 0
 
 // When set to 1, ignores the limit sensors and assumes the spans reached home.
-#define SPAN_DEBUG_IGNORE_LIMITS 1 // XXX
+#define SPAN_DEBUG_IGNORE_LIMITS 0
 
 // Establishes an unit of length equal to the distance traversed theoretically
 // by one microstep with the given divisor. Note that the step loop may issue
@@ -123,7 +123,7 @@ struct span_move_spec {
 
 #define SPAN_DISTANCE(velocity_delta, accel) (int)(((int64_t)(velocity_delta) * (velocity_delta)) / (accel) / 2)
 
-static const struct span_move_spec span_move_spec_home = {
+static const struct span_move_spec span_move_spec_home_full_travel = {
     .travel_total = SPAN_FULL_TRAVEL + SPAN_EXTRA_TRAVEL,
     .travel_slow_start = SPAN_HOME_SLOW_START_TRAVEL,
     .travel_slow_stop = SPAN_HOME_SLOW_STOP_TRAVEL + SPAN_EXTRA_TRAVEL + 
@@ -131,6 +131,15 @@ static const struct span_move_spec span_move_spec_home = {
     .speed_slow = SPAN_HOME_SPEED_SLOW,
     .speed_rapid = SPAN_HOME_SPEED_RAPID,
     .accel = SPAN_HOME_ACCEL,
+};
+
+static const struct span_move_spec span_move_spec_home_partial_travel = {
+    .travel_total = SPAN_FULL_TRAVEL + SPAN_EXTRA_TRAVEL,
+    .travel_slow_start = 0,
+    .travel_slow_stop = 0,
+    .speed_slow = SPAN_HOME_SPEED_SLOW,
+    .speed_rapid = SPAN_HOME_SPEED_SLOW,
+    .accel = 0,
 };
 
 #define SPAN_RELIEF_SPEED SPAN_HOME_SPEED_SLOW // (SPAN_MM_TO_TRAVEL(10))
@@ -967,13 +976,16 @@ static int span_poll_home(bool extend) {
     if (span_action_state == SPAN_ACTION_HOME_DONE) {
         return 0;
     }
-    span_position = SPAN_POSITION_UNKNOWN;
 
     int err;
     k_sem_take(&span_state_sem, K_FOREVER);
 
     if (span_action_state != SPAN_ACTION_HOME_TRAVEL && span_action_state != SPAN_ACTION_HOME_RELIEF) {
-        span_loop_run_l(&span_move_spec_home, extend, SPAN_ACTUATOR_SET_ALL, SPAN_ACTUATOR_RUN_TANDEM);
+        bool full_travel = (extend && span_position == SPAN_POSITION_RETRACTED) ||
+                (!extend && span_position == SPAN_POSITION_EXTENDED);
+        span_position = SPAN_POSITION_UNKNOWN;
+        span_loop_run_l(full_travel ? &span_move_spec_home_full_travel : &span_move_spec_home_partial_travel,
+                extend, SPAN_ACTUATOR_SET_ALL, SPAN_ACTUATOR_RUN_TANDEM);
         if ((err = span_loop_prepare_actuators_l(true, SPAN_ACTUATOR_SET_ALL, true))) {
             span_loop_halt_l();
             span_action_state = SPAN_ACTION_ABORT;
@@ -1040,7 +1052,7 @@ static const struct span_move_spec *span_poll_jog_move_spec(enum span_move move)
     if (move == SPAN_MOVE_JOG) {
         return &span_move_spec_jog;
     }
-    return &span_move_spec_home;
+    return &span_move_spec_home_partial_travel;
 }
 
 static enum span_actuator_state span_poll_jog_actuator_state(unsigned actuator_set) {
@@ -1063,12 +1075,12 @@ int span_poll_jog(enum span_move move, bool extend, unsigned actuator_set) {
     if (span_action_state == SPAN_ACTION_JOG_DONE) {
         return 0;
     }
-    span_position = SPAN_POSITION_UNKNOWN;
 
     int err;
     k_sem_take(&span_state_sem, K_FOREVER);
 
     if (span_action_state != SPAN_ACTION_JOG_TRAVEL) {
+        span_position = SPAN_POSITION_UNKNOWN;
         span_loop_run_l(span_poll_jog_move_spec(move), extend, actuator_set, span_poll_jog_actuator_state(actuator_set));
         if ((err = span_loop_prepare_actuators_l(true, actuator_set, true))) {
             span_loop_halt_l();
