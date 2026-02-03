@@ -1,6 +1,6 @@
 # Bed lift v1.0
 
-**Status: Ready for fabrication, not yet tested**
+**Status: Fabricated, tested, in service, no issues found**
 
 ## Design synopsis
 

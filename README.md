@@ -93,11 +93,18 @@ $ west init -m https://github.com/j9brown/bed-lift
 $ west update
 ```
 
-4. Build and flash the firmware.
+4. Build and the firmware (either release or debug).
 
 ```sh
 $ cd bed-lift/firmware/app
-$ west build -p
+$ west build -p -d build/release
+$ west build -p -d build/debug -- -DFEATURE_LOG=y -DFEATURE_DEBUG=y
+```
+
+5. Connect an ST-Link v3 programmer to the `DEBUG` port with an `STDC14` cable.  Flash the firmware.
+
+```sh
+$ cd bed-lift/firmware/app
 $ west flash
 ```
 
@@ -105,6 +112,79 @@ Firmware for the older prototypes is preserved in the git history.
 
 - The v0.2 firmware was based on Zephyr RTOS v4.2.1 and compiled with Platform IO.
 - The v0.1 firmware was based on Arduino and compiled with Platform IO.
+
+## Usage
+
+The lift control panel has three switches:
+
+- `Power`: This on / off switch provides power to the lift driver and all actuators.  It is intended to remain on indefinitely.  Can be used to cut power in case of emergencies.
+- `Up / Off / Down`: This momentary-on / off / momentary-on switch has two positions.  Toggling the switch to the `Up` position raises the lift to the lounge position.  Toggling the switch to the `Down` position lowers the lift to the sleeping position.  The switch must be held in the `Up` or `Down` position for 0.5 seconds to engage the actuators as a precaution against accidental triggering.  The lift stops moving immediately as soon as the switch is released and returns to the `Off` position.
+- `Mode`: This momentary-on / off switch accesses diagnostic menus.  It is not intended to be used during normal operation.
+
+By default, the lift starts on the `Main Menu` and the `Up / Off / Down` controls whether the lift moves into the lounge or sleep position.
+
+To access a different menu, press and hold the `Mode` button for 0.5 seconds until the indicator lights `Amber` then blinks one or more times in a different color.  The second color indicates the menu and the number of blinks indicates the action that will be performed when the `Up / Off / Down` switch is activated.  Press the `Mode` button to cycle among actions and observe the number of blinks change.  Press an hold the `Mode` button for 0.5 seconds to access the next menu and observe the blink color change.  Refer to the table below to identify the currently selected menu action.
+
+The lift reverts to an idle state when the user does not interact with the controls for some time.
+
+### Visual feedback
+
+An RGB color indicator shows the state of the device at the control panel.  There is also a monochromatic red LED on the circuit board itself that indicators the same state as the indicator (but without color).
+
+- When the lift remains idle for some time, the indicator turns off.
+- When the lift is rising, the indicator shows a rainbow color wheel cycling from red to violet.
+- When the lift is lowering, the indicator shows a rainbow color wheel cycling from violet to red.
+- When the lift achieves the lounge or sleep position, the indicator lights `Green`.
+- When the lift movement is aborted without achieving the lounge or sleep position, the indicator lights `Amber`.
+- When a diagnostic menu mode is active, the indicator lights `Amber` then blinks one or more times in a different color depending on the menu.
+- When an error occurs, the indicator lights `Red` then blinks one or more times in a different color depending on the error.
+
+| Solid color  | Blink color  | Blinks | Purpose  | Meaning |
+| ------------ | ------------ | ------ | -------- | ------- |
+| Rainbow up   |              |        | Activity | Lift is rising |
+| Rainbow down |              |        | Activity | Lift is lowering |
+| Green        |              |        | Status   | Lift is in lounge or sleep position, ready for use |
+| Amber        |              |        | Status   | Lift is in an intermediate position, not ready for use |
+| Amber        | Cyan         | 1      | Menu     | Lift menu: Jog both lift actuators in tandem (synchronized) |
+| Amber        | Cyan         | 2      | Menu     | Lift menu: Jog both lift actuators indepedently (not synchronized) |
+| Amber        | Cyan         | 3      | Menu     | Lift menu: Jog lift actuator 1 (driver side) |
+| Amber        | Cyan         | 4      | Menu     | Lift menu: Jog lift actuator 2 (passenger side) |
+| Amber        | Blue         | 1      | Menu     | Span menu: Jog all span actuators in tandem (synchronized) |
+| Amber        | Blue         | 2      | Menu     | Span menu: Jog both span actuators 1 and 2 (driver side) in tandem (synchronized) |
+| Amber        | Blue         | 3      | Menu     | Span menu: Jog both span actuators 3 and 4 (passenger side) in tandem (synchronized) |
+| Amber        | Blue         | 4      | Menu     | Span menu: Jog both span actuator 1 (front driver side) independently (not synchronized) |
+| Amber        | Blue         | 5      | Menu     | Span menu: Jog both span actuator 2 (rear driver side) independently (not synchronized) |
+| Amber        | Blue         | 6      | Menu     | Span menu: Jog both span actuator 3 (front passenger side) independently (not synchronized) |
+| Amber        | Blue         | 7      | Menu     | Span menu: Jog both span actuator 4 (rear passenger side) independently (not synchronized) |
+| Red          |              |        | Error    | Error: An unspecified error occurred |
+| Red          | Magenta      | 1      | Error    | Control error: Movement of the bed has been remotely inhibited |
+| Red          | Amber        | 1      | Error    | Bed error: The bed components are in an unknown or unexpected state |
+| Red          | Cyan         | 1      | Error    | Lift error: Motor driver reported a fault |
+| Red          | Cyan         | 2      | Error    | Lift error: The actuators lost synchronization |
+| Red          | Cyan         | 3      | Error    | Lift error: Lift stationary when it should be moving or the hall sensors are not working correctly |
+| Red          | Cyan         | 1      | Error    | Lift error: I/O error communicating with the motor driver |
+| Red          | Cyan         | 1      | Error    | Lift error: Operation timed out because poll wasn't called often enough |
+| Red          | Blue         | 1      | Error    | Span error: Motor driver reported a fault |
+| Red          | Blue         | 2      | Error    | Span error: The actuators lost synchronization |
+| Red          | Blue         | 3      | Error    | Span error: The actuators did not stall at their home position as expected |
+| Red          | Blue         | 4      | Error    | Span error: The actuators traveled further than the expected distance without stalling |
+| Red          | Blue         | 5      | Error    | Span error: I/O error communicating with the motor driver |
+| Red          | Blue         | 6      | Error    | Span error: Operation timed out because poll wasn't called often enough |
+
+### Audible feedback
+
+A piezo buzzer provides audible feedback.
+
+- When the lift successfully raises into the lounge position, it plays a brief fanfare that ends on a rising tone.
+- When the lift successfully lowers into the sleep position, it plays a brief fanfare that ends on a falling tone.
+- When the lift encounters an error, it plays three long tones as an alert.
+- When the user attempts to perform an action that has been remotely inhibited, the lift plays three quick tones.
+
+### I2C interface
+
+Connect an I2C host to the lift driver's `EXT I2C` port using a `QWIIC` connector to remotely monitor the device, remotely inhibit operation of the control panel, and access low-level debug and test features.  The `EXT I2C` port galvanically isolates the bed lift from the host's power supply for safety.
+
+Refer to [monitor.c](./firmware/app/src/monitor.c) for the I2C protocol implementation.
 
 ## Notice
 
