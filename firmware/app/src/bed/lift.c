@@ -48,6 +48,9 @@ LOG_MODULE_REGISTER(lift);
 //#define LIFT_DEBUG_ASSUME_LIMIT_STATE LIFT_LIMIT_ABOVE_SAFE_ZONE
 //#define LIFT_DEBUG_ASSUME_LIMIT_STATE LIFT_LIMIT_ABOVE_CEILING
 
+// When set to 1, allows the lift to raise above the ceiling end-of-travel limit.
+#define LIFT_DEBUG_ALLOW_RAISE_ABOVE_CEILING 0
+
 #define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
 
 // Spin lock for the limit and hall sensor state.
@@ -326,6 +329,12 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                         lift_loop_data.lift1_duty || lift_loop_data.lift2_duty) {
                     lift_loop_data.position = LIFT_POSITION_ABOVE_CEILING;
                 }
+#if !LIFT_DEBUG_ALLOW_RAISE_ABOVE_CEILING
+                if (lift_loop_data.loop_state > LIFT_LOOP_HALT && lift_loop_data.raise) {
+                    lift_loop_data.loop_state = LIFT_LOOP_DONE;
+                    goto halt_and_exit_spinlock;
+                }
+#endif
                 break;
             default:
                 lift_loop_data.position = LIFT_POSITION_UNKNOWN;
