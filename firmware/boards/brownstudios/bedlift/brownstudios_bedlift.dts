@@ -5,7 +5,7 @@
 #define USE_SPI_DMA 0
 
 / {
-	model = "Brown Studios Bed Lift board";
+	model = "Brown Studios Bed Lift";
 	compatible = "brownstudios,bedlift";
 
 	chosen {
@@ -112,7 +112,7 @@
 	status = "okay";
 
 	indicator_pwm: pwm {
-		/* red, green, blue */
+		/* red, green, blue, power */
 		pinctrl-0 = <&tim3_ch1_pc6>, <&tim3_ch2_pc7>, <&tim3_ch3_pc15>, <&tim3_ch4_pa8>;
 		pinctrl-names = "default";
 		status = "okay";

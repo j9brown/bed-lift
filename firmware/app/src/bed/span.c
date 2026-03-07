@@ -231,10 +231,10 @@ static void span_limit_update_l(uint32_t cycle) {
     gpio_port_value_t value = 0;
     gpio_port_get(span1_limit_a_gpio.port, &value);
     unsigned state =
-            ((value & BIT(span1_limit_a_gpio.pin)) ? SPAN_LIMIT_STATE_1A : 0) |
-            ((value & BIT(span1_limit_b_gpio.pin)) ? SPAN_LIMIT_STATE_1B : 0) |
-            ((value & BIT(span2_limit_a_gpio.pin)) ? SPAN_LIMIT_STATE_2A : 0) |
-            ((value & BIT(span2_limit_b_gpio.pin)) ? SPAN_LIMIT_STATE_2B : 0);
+            (IS_BIT_SET(value, span1_limit_a_gpio.pin) ? SPAN_LIMIT_STATE_1A : 0) |
+            (IS_BIT_SET(value, span1_limit_b_gpio.pin) ? SPAN_LIMIT_STATE_1B : 0) |
+            (IS_BIT_SET(value, span2_limit_a_gpio.pin) ? SPAN_LIMIT_STATE_2A : 0) |
+            (IS_BIT_SET(value, span2_limit_b_gpio.pin) ? SPAN_LIMIT_STATE_2B : 0);
     if (state != span_limit_data.raw_state) {
         span_limit_data.raw_state = state;
         span_limit_data.raw_change_cycle = cycle;
@@ -879,13 +879,13 @@ static enum span_position span_position; // not guarded by semaphore
 int span_init(void) {
     int err;
     const struct device *span_limit_port = span1_limit_a_gpio.port;
-    if (!device_is_ready(span_limit_port)) {
-        return -ENODEV;
-    }
     if (span_limit_port != span1_limit_b_gpio.port ||
             span_limit_port != span2_limit_a_gpio.port ||
             span_limit_port != span2_limit_b_gpio.port) {
         return -EIO;
+    }
+    if (!device_is_ready(span_limit_port)) {
+        return -ENODEV;
     }
     if ((err = gpio_pin_configure_dt(&span1_limit_a_gpio, GPIO_INPUT)) ||
             (err = gpio_pin_configure_dt(&span1_limit_b_gpio, GPIO_INPUT)) ||

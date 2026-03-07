@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Specific error codes that describe the state of the bed lift.
+ * @brief Specific error codes that describe the state of the system.
  *
  * These error codes share space with the negative errno set of values and are constrained
  * to fit into 1 byte when reported to external systems so they start at -255 and work

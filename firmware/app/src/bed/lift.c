@@ -85,8 +85,8 @@ static void lift_limit_update_l(uint32_t cycle) {
     gpio_port_value_t value = 0;
     gpio_port_get(lift_limit_a_gpio.port, &value);
     enum lift_limit_state state =
-            ((value & BIT(lift_limit_a_gpio.pin)) ? 0b01 : 0) |
-            ((value & BIT(lift_limit_b_gpio.pin)) ? 0b10 : 0);
+            (IS_BIT_SET(value, lift_limit_a_gpio.pin) ? 0b01 : 0) |
+            (IS_BIT_SET(value, lift_limit_b_gpio.pin) ? 0b10 : 0);
     if (state != lift_limit_data.raw_state) {
         lift_limit_data.raw_state = state;
         lift_limit_data.raw_change_cycle = cycle;
@@ -145,8 +145,8 @@ static void lift1_hall_gpio_handler(const struct device *port, struct gpio_callb
     gpio_port_value_t value = 0;
     gpio_port_get(port, &value);
     unsigned bits =
-            ((value & BIT(lift1_hall1_gpio.pin)) ? 0b10 : 0) |
-            ((value & BIT(lift1_hall2_gpio.pin)) ? 0b01 : 0);
+            (IS_BIT_SET(value, lift1_hall1_gpio.pin) ? 0b10 : 0) |
+            (IS_BIT_SET(value, lift1_hall2_gpio.pin) ? 0b01 : 0);
     atomic_add(&lift1_hall_data.isr_position, LIFT_HALL_QUADRATURE[(lift1_hall_data.isr_bits << 2) | bits]);
     lift1_hall_data.isr_bits = bits;
 }
@@ -156,8 +156,8 @@ static void lift2_hall_gpio_handler(const struct device *port, struct gpio_callb
     gpio_port_value_t value = 0;
     gpio_port_get(port, &value);
     unsigned bits =
-            ((value & BIT(lift2_hall1_gpio.pin)) ? 0b10 : 0) |
-            ((value & BIT(lift2_hall2_gpio.pin)) ? 0b01 : 0);
+            (IS_BIT_SET(value, lift2_hall1_gpio.pin) ? 0b10 : 0) |
+            (IS_BIT_SET(value, lift2_hall2_gpio.pin) ? 0b01 : 0);
     atomic_add(&lift2_hall_data.isr_position, LIFT_HALL_QUADRATURE[(lift2_hall_data.isr_bits << 2) | bits]);
     lift2_hall_data.isr_bits = bits;
 }
@@ -550,14 +550,6 @@ int lift_init(void) {
     const struct device *lift2_hall_port = lift2_hall1_gpio.port;
     const struct device *lift_in_dev = lift1_in1_pwm.dev;
     const uint32_t lift_in_period_ns = lift1_in1_pwm.period;
-    if (!device_is_ready(lift_fault_port) ||
-            !device_is_ready(lift_sleep_port) ||
-            !device_is_ready(lift_limit_port) ||
-            !device_is_ready(lift1_hall_port) ||
-            !device_is_ready(lift2_hall_port) ||
-            !device_is_ready(lift_in_dev)) {
-        return -ENODEV;
-    }
     if (lift_limit_port != lift_limit_b_gpio.port ||
             lift1_hall_port != lift1_hall2_gpio.port ||
             lift2_hall_port != lift2_hall2_gpio.port ||
@@ -566,7 +558,14 @@ int lift_init(void) {
             lift2_in2_pwm.dev != lift_in_dev || lift2_in2_pwm.period != lift_in_period_ns) {
         return -EIO;
     }
-
+    if (!device_is_ready(lift_fault_port) ||
+            !device_is_ready(lift_sleep_port) ||
+            !device_is_ready(lift_limit_port) ||
+            !device_is_ready(lift1_hall_port) ||
+            !device_is_ready(lift2_hall_port) ||
+            !device_is_ready(lift_in_dev)) {
+        return -ENODEV;
+    }
     if ((err = gpio_pin_configure_dt(&lift_fault_gpio, GPIO_INPUT)) ||
             (err = gpio_pin_configure_dt(&lift_sleep_gpio, GPIO_OUTPUT_ACTIVE)) ||
             (err = gpio_pin_configure_dt(&lift_limit_a_gpio, GPIO_INPUT)) ||

@@ -10,6 +10,7 @@ static const struct gpio_dt_spec control_up_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_
 static const struct gpio_dt_spec control_down_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, control_down_gpios);
 
 #define CONTROL_DEBOUNCE_MS (10)
+#define CONTROL_HOLD_MS (500)
 
 static struct gpio_callback control_gpio_callback;
 
@@ -19,13 +20,11 @@ static atomic_t control_action_current;
 static void control_work_handler(struct k_work* work);
 K_WORK_DELAYABLE_DEFINE(control_work, control_work_handler);
 
-// Note: This GPIO handler shares an ISR with elevated interrupt priority. Be quick.
-// TODO: Change the hardware to use an EXTI line with lower interrupt priotity for this handler.
 static void control_gpio_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins) {
     gpio_port_value_t value = 0;
     gpio_port_get(port, &value);
-    bool control_up = value & BIT(control_up_gpio.pin);
-    bool control_down = value & BIT(control_down_gpio.pin);
+    bool control_up = IS_BIT_SET(value, control_up_gpio.pin);
+    bool control_down = IS_BIT_SET(value, control_down_gpio.pin);
     enum control_action action;
     if (control_up && !control_down) {
         action = CONTROL_ACTION_PRESS_UP;
@@ -58,7 +57,7 @@ static void control_work_handler(struct k_work* work) {
             break;
     }
     if (reschedule_for_hold) {
-        k_work_reschedule(&control_work, K_MSEC(500));
+        k_work_reschedule(&control_work, K_MSEC(CONTROL_HOLD_MS));
     }
 
     atomic_set(&control_action_current, action);
@@ -67,11 +66,11 @@ static void control_work_handler(struct k_work* work) {
 int control_init(void) {
     int err;
     const struct device *port = control_up_gpio.port;
-    if (!device_is_ready(port)) {
-        return -ENODEV;
-    }
     if (port != control_down_gpio.port) {
         return -EIO;
+    }
+    if (!device_is_ready(port)) {
+        return -ENODEV;
     }
     gpio_init_callback(&control_gpio_callback, control_gpio_handler,
         BIT(control_up_gpio.pin) | BIT(control_down_gpio.pin));
@@ -90,6 +89,6 @@ int control_init(void) {
     return 0;
 }
 
-enum control_action control_get_action_current(void) {
+enum control_action control_get_action(void) {
     return atomic_get(&control_action_current);
 }

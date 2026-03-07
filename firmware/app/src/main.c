@@ -14,7 +14,7 @@
 
 LOG_MODULE_REGISTER(app);
 
-#define WATCHDOG_TIMEOUT_MS (10000)
+#define WATCHDOG_TIMEOUT_MS (1000)
 static const struct device *watchdog_dev = DEVICE_DT_GET(DT_NODELABEL(iwdg));
 
 // Timeout for the indicator to go dark after completing an activity.
@@ -295,7 +295,7 @@ static void loop(void) {
     static int last_error;
 
     const struct monitor_setting setting = monitor_get_setting();
-    const enum control_action action_current = control_get_action_current();
+    const enum control_action action_current = control_get_action();
     if (action_current == CONTROL_ACTION_RELEASE) {
         action_error = 0;
         action_complete = false;

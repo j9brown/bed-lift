@@ -18,9 +18,9 @@ enum control_action {
 };
 
 /**
- * @brief Gets the current action.
+ * @brief Get the action determined by the buttons.
  */
-enum control_action control_get_action_current(void);
+enum control_action control_get_action(void);
 
 /**
  * @brief Initialize the control driver.

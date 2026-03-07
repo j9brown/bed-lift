@@ -1,6 +1,6 @@
 board:
   name: brownstudios_bedlift
-  full_name: Brown Studios Bedlift
+  full_name: Brown Studios Bed Lift
   vendor: brownstudios
   revision:
     format: major.minor.patch
