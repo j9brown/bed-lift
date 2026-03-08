@@ -211,7 +211,7 @@ static const struct device *lift_loop_tick_dev = DEVICE_DT_GET(DT_NODELABEL(lift
 #define LIFT_LOOP_TICK_PERIOD_US (USEC_PER_SEC / LIFT_LOOP_TICK_FREQUENCY)
 
 // The maximum positional error to allow while running in tandem.
-#define LIFT_LOOP_MAX_TANDEM_ERROR (LIFT_HALL_PULSES_PER_INCH / 3)
+#define LIFT_LOOP_MAX_TANDEM_ERROR (LIFT_HALL_PULSES_PER_INCH / 2)
 
 // Terms for the PID controller. Adjusts balance factor per step of misalignment.
 // The parameters are expressed in recursive form.
@@ -393,7 +393,9 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                 lift_loop_data.control_error[2] = lift_loop_data.control_error[1];
                 lift_loop_data.control_error[1] = lift_loop_data.control_error[0];
                 lift_loop_data.control_error[0] = delta * sign;
-                const q15_t extreme_balance = Q15_ONE * 15 / 16; // ensure resulting duty is always non-zero
+                // Ensure resulting duty is always non-zero and provides some minimum amount of torque
+                // so as not to cause unintended stalls while one actuator is catching up at end-of-travel.
+                const q15_t extreme_balance = Q15_ONE * 10 / 16;
                 lift_loop_data.control_balance = q15_clamp(lift_loop_data.control_balance +
                         LIFT_LOOP_PID_A0 * lift_loop_data.control_error[0] +
                         LIFT_LOOP_PID_A1 * lift_loop_data.control_error[1] +
@@ -406,6 +408,8 @@ static void lift_loop_tick_handler(const struct device *dev, void *user_data) {
                     lift_loop_data.lift1_duty = (full_duty + reduced_duty) * sign;
                     lift_loop_data.lift2_duty = full_duty * sign;
                 }
+                LOG_DBG("PID control_balance: %6d, lift1_duty: %6d, lift2_duty: %6d",
+                        lift_loop_data.control_balance, lift_loop_data.lift1_duty, lift_loop_data.lift2_duty);
                 break;
             }
         }
@@ -719,6 +723,9 @@ static int lift_poll_move(enum lift_move move, bool raise, bool jog) {
         if (lift_action_state == LIFT_ACTION_MOVE_TRAVEL) {
             if ((err = lift_poll_await_done_l())) {
                 K_SPINLOCK_BREAK;
+            }
+            if (jog && move != LIFT_MOVE_TANDEM) {
+                lift_hall_reset_origin_l();
             }
             lift_loop_halt_l();
             lift_loop_data.loop_state = LIFT_ACTION_MOVE_DONE;

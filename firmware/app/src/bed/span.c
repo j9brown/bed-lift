@@ -118,8 +118,8 @@ struct span_move_spec {
 #define SPAN_HOME_SLOW_START_TRAVEL (SPAN_MM_TO_TRAVEL(5))
 #define SPAN_HOME_SLOW_STOP_TRAVEL (SPAN_MM_TO_TRAVEL(15))
 #define SPAN_HOME_SPEED_SLOW (SPAN_MM_TO_TRAVEL(15))
-#define SPAN_HOME_SPEED_RAPID (SPAN_MM_TO_TRAVEL(50))
-#define SPAN_HOME_ACCEL (SPAN_MM_TO_TRAVEL(80))
+#define SPAN_HOME_SPEED_RAPID (SPAN_MM_TO_TRAVEL(40)) // maximum 50
+#define SPAN_HOME_ACCEL (SPAN_MM_TO_TRAVEL(60)) // maximum 80
 
 #define SPAN_DISTANCE(velocity_delta, accel) (int)(((int64_t)(velocity_delta) * (velocity_delta)) / (accel) / 2)
 
