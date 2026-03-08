@@ -11,6 +11,7 @@ static const struct gpio_dt_spec control_down_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USE
 
 #define CONTROL_DEBOUNCE_MS (10)
 #define CONTROL_HOLD_MS (500)
+#define CONTROL_LONG_HOLD_MS (3000 - CONTROL_HOLD_MS)
 
 static struct gpio_callback control_gpio_callback;
 
@@ -40,27 +41,60 @@ static void control_gpio_handler(const struct device *port, struct gpio_callback
 }
 
 static void control_work_handler(struct k_work* work) {
-    enum control_action action = atomic_get(&control_action_pending);
+    enum control_action pending = atomic_get(&control_action_pending);
+    enum control_action current = atomic_get(&control_action_current);
     bool reschedule_for_hold;
-    switch (action) {
+    k_timeout_t hold_time;
+    switch (pending) {
         case CONTROL_ACTION_PRESS_UP:
-            reschedule_for_hold = atomic_cas(&control_action_pending, action, CONTROL_ACTION_HOLD_UP);
+            if (current == CONTROL_ACTION_HOLD_UP_THEN_PRESS_MODE) {
+                return; // no change
+            }
+            reschedule_for_hold = atomic_cas(&control_action_pending, pending, CONTROL_ACTION_HOLD_UP);
+            hold_time = K_MSEC(CONTROL_HOLD_MS);
             break;
         case CONTROL_ACTION_PRESS_DOWN:
-            reschedule_for_hold = atomic_cas(&control_action_pending, action, CONTROL_ACTION_HOLD_DOWN);
+            if (current == CONTROL_ACTION_HOLD_DOWN_THEN_PRESS_MODE) {
+                return; // no change
+            }
+            reschedule_for_hold = atomic_cas(&control_action_pending, pending, CONTROL_ACTION_HOLD_DOWN);
+            hold_time = K_MSEC(CONTROL_HOLD_MS);
             break;
-        case CONTROL_ACTION_PRESS_MODE:
-            reschedule_for_hold = atomic_cas(&control_action_pending, action, CONTROL_ACTION_HOLD_MODE);
+        case CONTROL_ACTION_PRESS_MODE: {
+            enum control_action current = atomic_get(&control_action_current);
+            switch (current) {
+                case CONTROL_ACTION_HOLD_UP:
+                    pending = CONTROL_ACTION_HOLD_UP_THEN_PRESS_MODE;
+                    reschedule_for_hold = false;
+                    break;
+                case CONTROL_ACTION_HOLD_DOWN:
+                    pending = CONTROL_ACTION_HOLD_DOWN_THEN_PRESS_MODE;
+                    reschedule_for_hold = false;
+                    break;
+                case CONTROL_ACTION_HOLD_UP_THEN_PRESS_MODE:
+                case CONTROL_ACTION_HOLD_DOWN_THEN_PRESS_MODE:
+                    return; // no change
+                default:
+                    reschedule_for_hold = atomic_cas(&control_action_pending, pending, CONTROL_ACTION_HOLD_MODE);
+                    hold_time = K_MSEC(CONTROL_HOLD_MS);
+                    break;
+            }
+            break;
+        }
+        case CONTROL_ACTION_HOLD_MODE:
+            reschedule_for_hold = atomic_cas(&control_action_pending, pending, CONTROL_ACTION_LONG_HOLD_MODE);
+            hold_time = K_MSEC(CONTROL_LONG_HOLD_MS);
             break;
         default:
             reschedule_for_hold = false;
+            hold_time = K_MSEC(0);
             break;
     }
     if (reschedule_for_hold) {
-        k_work_reschedule(&control_work, K_MSEC(CONTROL_HOLD_MS));
+        k_work_reschedule(&control_work, hold_time);
     }
 
-    atomic_set(&control_action_current, action);
+    atomic_set(&control_action_current, pending);
 }
 
 int control_init(void) {

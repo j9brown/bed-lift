@@ -119,11 +119,17 @@ The lift control panel has three switches:
 
 - `Power`: This on / off switch provides power to the lift driver and all actuators.  It is intended to remain on indefinitely.  Can be used to cut power in case of emergencies.
 - `Up / Off / Down`: This momentary-on / off / momentary-on switch has two positions.  Toggling the switch to the `Up` position raises the lift to the lounge position.  Toggling the switch to the `Down` position lowers the lift to the sleeping position.  The switch must be held in the `Up` or `Down` position for 0.5 seconds to engage the actuators as a precaution against accidental triggering.  The lift stops moving immediately as soon as the switch is released and returns to the `Off` position.
-- `Mode`: This momentary-on / off switch accesses diagnostic menus.  It is not intended to be used during normal operation.
+- `Mode`: This momentary-on / off switch activates special modes.
 
 By default, the lift starts on the `Main Menu` and the `Up / Off / Down` controls whether the lift moves into the lounge or sleep position.
 
-To access a different menu, press and hold the `Mode` button for 0.5 seconds until the indicator lights `Amber` then blinks one or more times in a different color.  The second color indicates the menu and the number of blinks indicates the action that will be performed when the `Up / Off / Down` switch is activated.  Press the `Mode` button to cycle among actions and observe the number of blinks change.  Press an hold the `Mode` button for 0.5 seconds to access the next menu and observe the blink color change.  Refer to the table below to identify the currently selected menu action.
+While holding the switch `Up` or `Down` and the lift is raising or lowering, press the `Mode` button to activate automatic movement.  Then, release all of the controls and the lift will continue moving in the requested direction until the final position is reached or an error occurs.  To stop automatic movement, press any control.
+
+**Use caution when activating automatic movement and continue paying attention to the lift to avoid damage or injury!**
+
+to ensure the lift won't encounter any obstructions in this mode because it could damage itself if you aren't paying attention!
+
+To access a different menu, press and hold the `Mode` button for 3 seconds until the indicator lights `Amber` then blinks one or more times in a different color and a tone is played.  The second color indicates the menu and the number of blinks indicates the action that will be performed when the `Up / Off / Down` switch is activated.  Press the `Mode` button to cycle among actions and observe the number of blinks change.  Press and hold the `Mode` button for 0.5 seconds to access the next menu and observe the blink color change.  Refer to the table below to identify the currently selected menu action.
 
 The lift reverts to an idle state when the user does not interact with the controls for some time.
 
@@ -179,6 +185,7 @@ A piezo buzzer provides audible feedback.
 - When the lift successfully lowers into the sleep position, it plays a brief fanfare that ends on a falling tone.
 - When the lift encounters an error, it plays three long tones as an alert.
 - When the user attempts to perform an action that has been remotely inhibited, the lift plays three quick tones.
+- When using the diagnostic menu, the lift plays a tone as each menu or mode is entered.
 
 ### I2C interface
 

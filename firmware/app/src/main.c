@@ -21,7 +21,7 @@ static const struct device *watchdog_dev = DEVICE_DT_GET(DT_NODELABEL(iwdg));
 #define ACTIVITY_TIMEOUT_MS (1500)
 
 // Timeout to revert to the main menu after completing an activity.
-#define MENU_TIMEOUT_MS (60000)
+#define MENU_TIMEOUT_MS (15000)
 
 /*
  * Error codes.
@@ -84,6 +84,20 @@ MELODY(melody_pose_lounge,
 
 MELODY(melody_pose_sleep,
     MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(C6, 250));
+
+MELODY(melody_menu_mode,
+    MELODY_NOTE(E6, 50));
+
+MELODY(melody_menu_main,
+    MELODY_NOTE(E6, 50), MELODY_REST(25), MELODY_NOTE(F6, 25), MELODY_REST(25),
+    MELODY_NOTE(E6, 25), MELODY_REST(25), MELODY_NOTE(D6, 25), MELODY_REST(25),
+    MELODY_NOTE(E6, 50));
+
+MELODY(melody_menu_jog_lift,
+    MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(F6, 50), MELODY_REST(50), MELODY_NOTE(G6, 50));
+
+MELODY(melody_menu_jog_span,
+    MELODY_NOTE(E6, 50), MELODY_REST(50), MELODY_NOTE(D6, 50), MELODY_REST(50), MELODY_NOTE(C6, 50));
 
 static void melody_play_error(int err) {
     switch (err) {
@@ -156,9 +170,19 @@ enum menu {
     MENU_JOG_LIFT = 1,
     MENU_JOG_SPAN = 2,
 };
+
+struct menu_spec {
+    const unsigned mode_count;
+    const melody_t *melody;
+};
+static const struct menu_spec menu_specs[] = {
+    { 0, melody_menu_main },
+    { ARRAY_SIZE(jog_lift_specs), melody_menu_jog_lift },
+    { ARRAY_SIZE(jog_span_specs), melody_menu_jog_span },
+};
+
 static enum menu menu;
 static unsigned menu_mode;
-static const unsigned menu_mode_count[] = { 0, ARRAY_SIZE(jog_lift_specs), ARRAY_SIZE(jog_span_specs) };
 
 /*
  * Control interface.
@@ -168,19 +192,30 @@ static int do_rest(void) {
     return bed_poll_stop();
 }
 
-static int do_click_action(bool up) {
-    return 0;
-}
-
-static int do_click_mode(void) {
-    menu_mode += 1;
-    if (menu_mode >= menu_mode_count[menu]) {
-        menu_mode = 0;
+static void do_goto_menu(enum menu new_menu) {
+    menu_mode = 0;
+    if (menu != new_menu) {
+        menu = new_menu;
+        melody_play(menu_specs[menu].melody);
     }
-    return 0;
 }
 
-static int do_hold_action(bool up, struct monitor_setting setting) {
+static void do_next_menu(void) {
+    do_goto_menu(menu + 1 >= ARRAY_SIZE(menu_specs) ? MENU_MAIN : menu + 1);
+}
+
+static void do_next_menu_mode(void) {
+    const unsigned count = menu_specs[menu].mode_count;
+    if (count) {
+        menu_mode += 1;
+        if (menu_mode >= count) {
+            menu_mode = 0;
+        }
+        melody_play(melody_menu_mode);
+    }
+}
+
+static int do_move(bool up, struct monitor_setting setting) {
     if (setting.control_inhibit) {
         return CONTROL_ERROR_INHIBITED;
     }
@@ -202,15 +237,6 @@ static int do_hold_action(bool up, struct monitor_setting setting) {
         default:
             return 0;
     }
-}
-
-static int do_long_press_mode(void) {
-    menu += 1;
-    menu_mode = 0;
-    if (menu >= ARRAY_SIZE(menu_mode_count)) {
-        menu = MENU_MAIN;
-    }
-    return 0;
 }
 
 static void show_status(void) {
@@ -287,102 +313,137 @@ static int setup(void) {
     return 0;
 }
 
+enum command {
+    COMMAND_NONE = 0,
+    COMMAND_NEXT_MENU = 1,
+    COMMAND_NEXT_MENU_MODE = 2,
+    COMMAND_MOVE_UP = 3,
+    COMMAND_MOVE_DOWN = 4,
+    COMMAND_AUTO_MOVE_UP = 5,
+    COMMAND_AUTO_MOVE_DOWN = 6,
+};
+
 static void loop(void) {
-    static int action_error;
-    static bool action_complete;
-    static enum control_action action_pending;
-    static int64_t last_action_time;
     static int last_error;
 
-    const struct monitor_setting setting = monitor_get_setting();
-    const enum control_action action_current = control_get_action();
-    if (action_current == CONTROL_ACTION_RELEASE) {
-        action_error = 0;
-        action_complete = false;
-    }
-    int err = 0; // 0 means done (ready to rest), 1 means in progress, < 0 means error
-    bool did_action = false;
-    if (!action_error && !action_complete) {
-        switch (action_current) {
-            case CONTROL_ACTION_PRESS_UP:
-            case CONTROL_ACTION_PRESS_DOWN:
-            case CONTROL_ACTION_PRESS_MODE:
-                action_pending = action_current;
-                break;
-            case CONTROL_ACTION_HOLD_UP:
-                err = do_hold_action(true, setting);
-                action_pending = CONTROL_ACTION_RELEASE;
-                did_action = true;
-                break;
-            case CONTROL_ACTION_HOLD_DOWN:
-                err = do_hold_action(false, setting);
-                action_pending = CONTROL_ACTION_RELEASE;
-                did_action = true;
-                break;
-            case CONTROL_ACTION_HOLD_MODE:
-                if (action_pending == CONTROL_ACTION_PRESS_MODE) {
-                    err = do_long_press_mode();
-                    action_pending = CONTROL_ACTION_HOLD_MODE;
-                    did_action = true;
-                }
-                break;
-            case CONTROL_ACTION_RELEASE:
-            default:
-                switch (action_pending) {
-                    case CONTROL_ACTION_PRESS_UP:
-                        err = do_click_action(true);
-                        did_action = true;
-                        break;
-                    case CONTROL_ACTION_PRESS_DOWN:
-                        err = do_click_action(false);
-                        did_action = true;
-                        break;
-                    case CONTROL_ACTION_PRESS_MODE:
-                        err = do_click_mode();
-                        did_action = true;
-                        break;
-                    default:
-                        break;
-                }
-                action_pending = CONTROL_ACTION_RELEASE;
-                break;
-        }
-    }
-    if (did_action) {
-        last_action_time = k_uptime_get();
-        if (err == 0) {
-            if (!action_complete && menu == MENU_MAIN) {
-                melody_play_pose();
+    static enum command command_previous;
+    static bool command_issued;   // true if the command has been issued, result indicates most recent status
+    static int command_result;    // 0 means done (ready to rest), 1 means in progress (issue again), < 0 means error (abort)
+    static int64_t command_time;  // time when the command was last issued
+    static enum control_action control_action_previous;
+
+    // Determine which command to perform based on control inputs.
+    enum control_action control_action_next = control_get_action();
+    enum command command_next;
+    switch (control_action_next) {
+        case CONTROL_ACTION_HOLD_UP:
+            command_next = COMMAND_MOVE_UP;
+            break;
+        case CONTROL_ACTION_HOLD_UP_THEN_PRESS_MODE:
+            command_next = COMMAND_AUTO_MOVE_UP;
+            break;
+        case CONTROL_ACTION_HOLD_DOWN:
+            command_next = COMMAND_MOVE_DOWN;
+            break;
+        case CONTROL_ACTION_HOLD_DOWN_THEN_PRESS_MODE:
+            command_next = COMMAND_AUTO_MOVE_DOWN;
+            break;
+        case CONTROL_ACTION_HOLD_MODE:
+            command_next = menu != MENU_MAIN ? COMMAND_NEXT_MENU : COMMAND_NONE;
+            break;
+        case CONTROL_ACTION_LONG_HOLD_MODE:
+            command_next = menu == MENU_MAIN ? COMMAND_NEXT_MENU : COMMAND_NONE;
+            break;
+        case CONTROL_ACTION_RELEASE:
+            switch (control_action_previous) {
+                case CONTROL_ACTION_PRESS_MODE:
+                    command_next = COMMAND_NEXT_MENU_MODE;
+                    break;
+                default:
+                    if ((command_previous == COMMAND_AUTO_MOVE_UP || command_previous == COMMAND_AUTO_MOVE_DOWN)
+                            && command_issued && command_result == 1) {
+                        command_next = command_previous;
+                    } else {
+                        command_next = COMMAND_NONE;
+                    }
+                    break;
             }
-            action_complete = true;
+            break;
+        default:
+            command_next = COMMAND_NONE;
+            break;
+    }
+    control_action_previous = control_action_next;
+    command_previous = command_next;
+    LOG_DBG("control %d, command %d, menu %d, menu mode %d", control_action_next, command_next, menu, menu_mode);
+
+    // Invoke the command.
+    const struct monitor_setting setting = monitor_get_setting();
+    bool did_move = false;
+    if (command_next == COMMAND_NONE) {
+        command_issued = false;
+        command_result = 0;
+    } else if (!command_issued || command_result == 1) {
+        command_issued = true;
+        command_time = k_uptime_get();
+        command_result = 0;
+        switch (command_next) {
+            case COMMAND_MOVE_UP:
+            case COMMAND_AUTO_MOVE_UP:
+                command_result = do_move(/*up*/ true, setting);
+                did_move = true;
+                break;
+            case COMMAND_MOVE_DOWN:
+            case COMMAND_AUTO_MOVE_DOWN:
+                command_result = do_move(/*up*/ false, setting);
+                did_move = true;
+                break;
+            case COMMAND_NEXT_MENU:
+                do_next_menu();
+                break;
+            case COMMAND_NEXT_MENU_MODE:
+                do_next_menu_mode();
+                break;
+            default:
+                break;
         }
-    } else if (menu != MENU_MAIN && k_uptime_get() - last_action_time >= MENU_TIMEOUT_MS) {
-        menu = MENU_MAIN;
+    }
+    if (!command_issued || command_result <= 0) {
+        int err = do_rest();
+        if (!command_result) {
+            command_result = err;
+        }
+    }
+    if (command_result < 0) {
+        melody_play_error(command_result);
+        last_error = command_result;
+        LOG_ERR("Error %d from command %d", command_result, command_next);
+    } else if (did_move && menu == MENU_MAIN && command_result == 0) {
+        melody_play_pose();
+    }
+
+    // Update menu.
+    if (menu != MENU_MAIN && k_uptime_get() - command_time >= MENU_TIMEOUT_MS) {
+        do_goto_menu(MENU_MAIN);
     }
     if (menu != MENU_MAIN) {
-        // enable 5V power so the span hall sensors operate while on the test menu
+        // Enable 5V power so the span hall sensors operate while on the test menu.
         power_5v_request(POWER_DEMAND_TEST);
     } else {
         power_5v_release(POWER_DEMAND_TEST);
     }
-    if (!did_action || action_complete) {
-        err = do_rest();
-    }
-    if (err < 0) {
-        if (!action_error) {
-            melody_play_error(err);
-        }
-        action_error = err;
-        last_error = err;
-    }
-    if (action_error) {
-        show_error(action_error);
-    } else if (k_uptime_get() - last_action_time < ACTIVITY_TIMEOUT_MS
+
+    // Update indicators.
+    if (command_result < 0) {
+        show_error(command_result);
+    } else if (k_uptime_get() - command_time < ACTIVITY_TIMEOUT_MS
             || menu != MENU_MAIN) {
         show_status();
     } else {
         indicator_pattern(NULL, 0);
     }
+
+    // Update monitor status.
     struct monitor_status status = {
         .bed_state = bed_get_state(),
         .bed_pose_current = bed_get_current_pose(),
@@ -392,8 +453,8 @@ static void loop(void) {
         .span_position = span_get_position(),
         .span_state = span_get_state(),
         .control_inhibited = setting.control_inhibit,
-        .control_active = did_action,
-        .control_error = !!action_error,
+        .control_active = command_issued,
+        .control_error = !!command_result,
         .last_error = -last_error,
     };
     monitor_set_status(status);
