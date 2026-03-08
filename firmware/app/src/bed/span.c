@@ -244,6 +244,10 @@ static void span_limit_update_l(uint32_t cycle) {
     }
 }
 
+static bool span_limit_is_stable_l(void) {
+    return span_limit_data.raw_state == span_limit_data.state;
+}
+
 /*
  * SPAN STEP SEQUENCER: Generates a limited number of step pulses at a specified rate.
  */
@@ -868,9 +872,10 @@ enum span_action_state {
     SPAN_ACTION_SLEEP_DONE = 0,
     SPAN_ACTION_HOME_TRAVEL = 1,
     SPAN_ACTION_HOME_RELIEF = 2,
-    SPAN_ACTION_HOME_DONE = 3,
-    SPAN_ACTION_JOG_TRAVEL = 4,
-    SPAN_ACTION_JOG_DONE = 5,
+    SPAN_ACTION_HOME_STOP = 3,
+    SPAN_ACTION_HOME_DONE = 4,
+    SPAN_ACTION_JOG_TRAVEL = 5,
+    SPAN_ACTION_JOG_DONE = 6,
 };
 static enum span_action_state span_action_state; // not guarded by semaphore
 
@@ -968,6 +973,7 @@ give_state_sem_and_return:
 
 static int span_poll_home(bool extend) {
     static bool actual_extend;
+    static unsigned pending_limit_state;
 
     if (actual_extend != extend) {
         span_action_state = SPAN_ACTION_ABORT;
@@ -980,7 +986,9 @@ static int span_poll_home(bool extend) {
     int err;
     k_sem_take(&span_state_sem, K_FOREVER);
 
-    if (span_action_state != SPAN_ACTION_HOME_TRAVEL && span_action_state != SPAN_ACTION_HOME_RELIEF) {
+    if (span_action_state != SPAN_ACTION_HOME_TRAVEL &&
+            span_action_state != SPAN_ACTION_HOME_RELIEF &&
+            span_action_state != SPAN_ACTION_HOME_STOP) {
         bool full_travel = (extend && span_position == SPAN_POSITION_RETRACTED) ||
                 (!extend && span_position == SPAN_POSITION_EXTENDED);
         span_position = SPAN_POSITION_UNKNOWN;
@@ -992,6 +1000,7 @@ static int span_poll_home(bool extend) {
             goto give_state_sem_and_return;
         }
         span_action_state = SPAN_ACTION_HOME_TRAVEL;
+        pending_limit_state = 0;
     }
     if (span_action_state == SPAN_ACTION_HOME_TRAVEL) {
         if ((err = span_loop_await_done_l())) {
@@ -1010,6 +1019,11 @@ static int span_poll_home(bool extend) {
         span_action_state = SPAN_ACTION_HOME_RELIEF;
     }
     if (span_action_state == SPAN_ACTION_HOME_RELIEF) {
+        // The span actuator arms can twist slightly outside of the range of detection of the hall sensors
+        // during movement resulting in a failure to detect end-of-travel and the two sets of actuators may
+        // observed this limit at different times.  Allow some slack in the detection by accumulating the
+        // limit state during the relief action.
+        pending_limit_state |= span_limit_data.state;
         if ((err = span_loop_await_done_l())) {
             if (err < 0) {
                 span_action_state = SPAN_ACTION_ABORT;
@@ -1022,10 +1036,17 @@ static int span_poll_home(bool extend) {
             goto give_state_sem_and_return;
         }
         span_loop_halt_l();
+        span_action_state = SPAN_ACTION_HOME_STOP;
+    }
+    if (span_action_state == SPAN_ACTION_HOME_STOP) {
+        pending_limit_state |= span_limit_data.state;
+        if (!span_limit_is_stable_l()) {
+            goto give_state_sem_and_return;
+        }
         span_action_state = SPAN_ACTION_HOME_DONE;
-        if (extend && (span_limit_data.state == SPAN_LIMIT_STATE_EXTENDED || SPAN_DEBUG_IGNORE_LIMITS)) {
+        if (extend && (pending_limit_state == SPAN_LIMIT_STATE_EXTENDED || SPAN_DEBUG_IGNORE_LIMITS)) {
             span_position = SPAN_POSITION_EXTENDED;
-        } else if (!extend && (span_limit_data.state == SPAN_LIMIT_STATE_RETRACTED || SPAN_DEBUG_IGNORE_LIMITS)) {
+        } else if (!extend && (pending_limit_state == SPAN_LIMIT_STATE_RETRACTED || SPAN_DEBUG_IGNORE_LIMITS)) {
             span_position = SPAN_POSITION_RETRACTED;
         } else {
             span_action_state = SPAN_ACTION_ABORT;
