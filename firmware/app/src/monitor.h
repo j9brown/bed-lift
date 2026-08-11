@@ -43,10 +43,10 @@ struct __packed monitor_lift_debug {
 _Static_assert(sizeof(struct monitor_lift_debug) == 4, "");
 
 struct __packed monitor_span_debug {
-    unsigned speed : 24; // microsteps per second
+    unsigned speed : 23; // microsteps per second
     bool extend : 1;
     unsigned limit_state : 4;
-    unsigned : 3;
+    unsigned limit_seen : 4;
 };
 _Static_assert(sizeof(struct monitor_span_debug) == 4, "");
 

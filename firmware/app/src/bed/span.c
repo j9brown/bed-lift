@@ -201,7 +201,7 @@ K_SEM_DEFINE(span_state_sem, 1, 1);
  */
 
 // Lift limit switch debounce interval.
-#define SPAN_LIMIT_DEBOUNCE_MS (50)
+#define SPAN_LIMIT_DEBOUNCE_MS (30)
 #define SPAN_LIMIT_DEBOUNCE_CYCLES (uint32_t)((uint64_t)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC * SPAN_LIMIT_DEBOUNCE_MS / 1000)
 
 #define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
@@ -211,37 +211,46 @@ static const struct gpio_dt_spec span1_limit_b_gpio = GPIO_DT_SPEC_GET(ZEPHYR_US
 static const struct gpio_dt_spec span2_limit_a_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, span2_limit_a_gpios);
 static const struct gpio_dt_spec span2_limit_b_gpio = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, span2_limit_b_gpios);
 
-#define SPAN_LIMIT_STATE_1A (1 << 0)
-#define SPAN_LIMIT_STATE_1B (1 << 1)
-#define SPAN_LIMIT_STATE_2A (1 << 2)
-#define SPAN_LIMIT_STATE_2B (1 << 3)
+#define SPAN_LIMIT_STATE_1A_INDEX (0)
+#define SPAN_LIMIT_STATE_1A (BIT(SPAN_LIMIT_STATE_1A_INDEX))
+#define SPAN_LIMIT_STATE_1B_INDEX (1)
+#define SPAN_LIMIT_STATE_1B (BIT(SPAN_LIMIT_STATE_1B_INDEX))
+#define SPAN_LIMIT_STATE_2A_INDEX (2)
+#define SPAN_LIMIT_STATE_2A (BIT(SPAN_LIMIT_STATE_2A_INDEX))
+#define SPAN_LIMIT_STATE_2B_INDEX (3)
+#define SPAN_LIMIT_STATE_2B (BIT(SPAN_LIMIT_STATE_2B_INDEX))
 #define SPAN_LIMIT_STATE_RETRACTED (SPAN_LIMIT_STATE_1A | SPAN_LIMIT_STATE_2A)
 #define SPAN_LIMIT_STATE_EXTENDED (SPAN_LIMIT_STATE_1B | SPAN_LIMIT_STATE_2B)
 
 struct span_limit_data {
     // These variables are guarded by span_state_sem
     unsigned raw_state;
-    uint32_t raw_change_cycle;
+    uint32_t raw_change_cycle[4];
     unsigned state;
+    unsigned seen; // all switches observed since last reset
 };
 static struct span_limit_data span_limit_data;
+
+static void span_limit_update_bit_l(uint32_t cycle, unsigned index, bool state, const char* name) {
+    if (state != IS_BIT_SET(span_limit_data.raw_state, index)) {
+        WRITE_BIT(span_limit_data.raw_state, index, state);
+        span_limit_data.raw_change_cycle[index] = cycle;
+    } else if (state != IS_BIT_SET(span_limit_data.state, index) &&
+            cycle - span_limit_data.raw_change_cycle[index] >= SPAN_LIMIT_DEBOUNCE_CYCLES) {
+        WRITE_BIT(span_limit_data.state, index, state);
+        LOG_INF("Span limit state: %s %s", name, state ? "on" : "off");
+    }
+}
 
 // This function must be called on every timer tick (before the cycle counter rolls over).
 static void span_limit_update_l(uint32_t cycle) {
     gpio_port_value_t value = 0;
     gpio_port_get(span1_limit_a_gpio.port, &value);
-    unsigned state =
-            (IS_BIT_SET(value, span1_limit_a_gpio.pin) ? SPAN_LIMIT_STATE_1A : 0) |
-            (IS_BIT_SET(value, span1_limit_b_gpio.pin) ? SPAN_LIMIT_STATE_1B : 0) |
-            (IS_BIT_SET(value, span2_limit_a_gpio.pin) ? SPAN_LIMIT_STATE_2A : 0) |
-            (IS_BIT_SET(value, span2_limit_b_gpio.pin) ? SPAN_LIMIT_STATE_2B : 0);
-    if (state != span_limit_data.raw_state) {
-        span_limit_data.raw_state = state;
-        span_limit_data.raw_change_cycle = cycle;
-    } else if (state != span_limit_data.state &&
-            cycle - span_limit_data.raw_change_cycle >= SPAN_LIMIT_DEBOUNCE_CYCLES) {
-        span_limit_data.state = state;
-    }
+    span_limit_update_bit_l(cycle, SPAN_LIMIT_STATE_1A_INDEX, IS_BIT_SET(value, span1_limit_a_gpio.pin), "1A");
+    span_limit_update_bit_l(cycle, SPAN_LIMIT_STATE_1B_INDEX, IS_BIT_SET(value, span1_limit_b_gpio.pin), "1B");
+    span_limit_update_bit_l(cycle, SPAN_LIMIT_STATE_2A_INDEX, IS_BIT_SET(value, span2_limit_a_gpio.pin), "2A");
+    span_limit_update_bit_l(cycle, SPAN_LIMIT_STATE_2B_INDEX, IS_BIT_SET(value, span2_limit_b_gpio.pin), "2B");
+    span_limit_data.seen |= span_limit_data.state;
 }
 
 static bool span_limit_is_stable_l(void) {
@@ -764,6 +773,7 @@ static void span_loop(void *, void *, void *) {
             .speed = span_loop_data.speed,
             .extend = span_loop_data.extend,
             .limit_state = span_limit_data.state,
+            .limit_seen = span_limit_data.seen,
         };
         monitor_set_span_debug(debug);
 
@@ -775,7 +785,7 @@ K_KERNEL_THREAD_DEFINE(span_loop_tid, SPAN_THREAD_STACK_SIZE, span_loop, NULL, N
 
 static void span_loop_init_l(const struct span_move_spec *move_spec, bool extend,
         unsigned actuator_set, enum span_actuator_state actuator_state, enum span_loop_state loop_state) {
-    span_step_set_travel_l(0, move_spec->travel_total);
+    span_step_set_travel_l(0, move_spec ? move_spec->travel_total : 0);
     span_loop_data.move_spec = move_spec;
     span_loop_data.extend = extend;
     span_loop_data.speed = 0;
@@ -798,6 +808,7 @@ static inline void span_loop_halt_l(void) {
 static inline void span_loop_run_l(const struct span_move_spec *move_spec, bool extend,
         unsigned actuator_set, enum span_actuator_state actuator_state) {
     span_loop_init_l(move_spec, extend, actuator_set, actuator_state, SPAN_LOOP_RUN);
+    span_limit_data.seen = 0;
 }
 
 static void span_loop_feed_l(void) {
@@ -973,7 +984,6 @@ give_state_sem_and_return:
 
 static int span_poll_home(bool extend) {
     static bool actual_extend;
-    static unsigned pending_limit_state;
 
     if (actual_extend != extend) {
         span_action_state = SPAN_ACTION_ABORT;
@@ -1000,7 +1010,6 @@ static int span_poll_home(bool extend) {
             goto give_state_sem_and_return;
         }
         span_action_state = SPAN_ACTION_HOME_TRAVEL;
-        pending_limit_state = 0;
     }
     if (span_action_state == SPAN_ACTION_HOME_TRAVEL) {
         if ((err = span_loop_await_done_l())) {
@@ -1019,11 +1028,6 @@ static int span_poll_home(bool extend) {
         span_action_state = SPAN_ACTION_HOME_RELIEF;
     }
     if (span_action_state == SPAN_ACTION_HOME_RELIEF) {
-        // The span actuator arms can twist slightly outside of the range of detection of the hall sensors
-        // during movement resulting in a failure to detect end-of-travel and the two sets of actuators may
-        // observed this limit at different times.  Allow some slack in the detection by accumulating the
-        // limit state during the relief action.
-        pending_limit_state |= span_limit_data.state;
         if ((err = span_loop_await_done_l())) {
             if (err < 0) {
                 span_action_state = SPAN_ACTION_ABORT;
@@ -1039,16 +1043,21 @@ static int span_poll_home(bool extend) {
         span_action_state = SPAN_ACTION_HOME_STOP;
     }
     if (span_action_state == SPAN_ACTION_HOME_STOP) {
-        pending_limit_state |= span_limit_data.state;
         if (!span_limit_is_stable_l()) {
+            err = 1; // keep waiting
             goto give_state_sem_and_return;
         }
+        // The span actuator arms can twist slightly outside of the range of detection of the hall sensors
+        // during movement resulting in a failure to detect end-of-travel and the two sets of actuators may
+        // observed this limit at different times.  Allow some slack in the detection by considering all of
+        // the limit states seen during the relief action instead of just the final state.
         span_action_state = SPAN_ACTION_HOME_DONE;
-        if (extend && (pending_limit_state == SPAN_LIMIT_STATE_EXTENDED || SPAN_DEBUG_IGNORE_LIMITS)) {
+        if (extend && (span_limit_data.seen == SPAN_LIMIT_STATE_EXTENDED || SPAN_DEBUG_IGNORE_LIMITS)) {
             span_position = SPAN_POSITION_EXTENDED;
-        } else if (!extend && (pending_limit_state == SPAN_LIMIT_STATE_RETRACTED || SPAN_DEBUG_IGNORE_LIMITS)) {
+        } else if (!extend && (span_limit_data.seen == SPAN_LIMIT_STATE_RETRACTED || SPAN_DEBUG_IGNORE_LIMITS)) {
             span_position = SPAN_POSITION_RETRACTED;
         } else {
+            LOG_INF("XXX seen %x", span_limit_data.seen);
             span_action_state = SPAN_ACTION_ABORT;
             err = SPAN_ERROR_NOT_HOME;
             goto give_state_sem_and_return;

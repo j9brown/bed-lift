@@ -75,6 +75,13 @@ enum lift_limit_state {
     LIFT_LIMIT_ABOVE_CEILING = 0b01,
 };
 
+const char* LIFT_LIMIT_STATE_NAMES[] = {
+    "ABOVE_SAFE_ZONE",
+    "ABOVE_CEILING",
+    "IN_SAFE_ZONE",
+    "BELOW_SAFE_ZONE",
+};
+
 struct lift_limit_data {
     // These variables are guarded by lift_lock
     enum lift_limit_state raw_state;
@@ -96,6 +103,7 @@ static void lift_limit_update_l(uint32_t cycle) {
     } else if (state != lift_limit_data.state &&
             cycle - lift_limit_data.raw_change_cycle >= LIFT_LIMIT_DEBOUNCE_CYCLES) {
         lift_limit_data.state = state;
+        LOG_INF("Lift limit state: %s", LIFT_LIMIT_STATE_NAMES[state]);
     }
 #ifdef LIFT_DEBUG_ASSUME_LIMIT_STATE
     lift_limit_data.state = LIFT_DEBUG_ASSUME_LIMIT_STATE;

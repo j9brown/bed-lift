@@ -375,7 +375,7 @@ static void loop(void) {
     }
     control_action_previous = control_action_next;
     command_previous = command_next;
-    LOG_DBG("control %d, command %d, menu %d, menu mode %d", control_action_next, command_next, menu, menu_mode);
+    LOG_DBG("Loop control %d, command %d, menu %d, menu mode %d", control_action_next, command_next, menu, menu_mode);
 
     // Invoke the command.
     const struct monitor_setting setting = monitor_get_setting();
@@ -414,10 +414,19 @@ static void loop(void) {
             command_result = err;
         }
     }
+    static int log_err_command_result;
+    static enum command log_err_command_next;
+    if (log_err_command_result != command_result || log_err_command_next != command_next) {
+        log_err_command_result = command_result;
+        log_err_command_next = command_next;
+        if (command_result < 0) {
+            LOG_ERR("Error %d from command %d", log_err_command_result, log_err_command_next);
+        }
+    }
+
     if (command_result < 0) {
         melody_play_error(command_result);
         last_error = command_result;
-        LOG_ERR("Error %d from command %d", command_result, command_next);
     } else if (did_move && menu == MENU_MAIN && command_result == 0) {
         melody_play_pose();
     }
